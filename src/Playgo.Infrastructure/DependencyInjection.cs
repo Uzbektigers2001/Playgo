@@ -26,7 +26,6 @@ public static class DependencyInjection
         services.AddStackExchangeRedisCache(options =>
         {
             options.Configuration = configuration.GetConnectionString("Redis")
-                ?? configuration["Redis:ConnectionString"]
                 ?? "localhost:6379";
             options.InstanceName = configuration["Redis:InstanceName"] ?? "playgo:";
         });
