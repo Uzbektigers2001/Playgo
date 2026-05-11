@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Playgo.Application.Common;
 using Playgo.Application.Common.Interfaces;
@@ -25,21 +26,46 @@ public class AuthService : IAuthService
 
     public async Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(request.Email))
+            return Result<AuthResponse>.Fail("Email is required.");
+
+        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 6)
+            return Result<AuthResponse>.Fail("Password must be at least 6 characters.");
+
         var email = request.Email.Trim().ToLowerInvariant();
-        var username = request.Username.Trim();
 
         if (await _db.Users.AnyAsync(u => u.Email == email, cancellationToken))
             return Result<AuthResponse>.Fail("Email is already registered.");
 
-        if (await _db.Users.AnyAsync(u => u.Username == username, cancellationToken))
-            return Result<AuthResponse>.Fail("Username is already taken.");
+        var baseUsername = !string.IsNullOrWhiteSpace(request.Username)
+            ? request.Username.Trim()
+            : !string.IsNullOrWhiteSpace(request.Name)
+                ? GenerateUsernameFromName(request.Name)
+                : GenerateUsernameFromName(email.Split('@')[0]);
+
+        if (string.IsNullOrWhiteSpace(baseUsername))
+            baseUsername = "user";
+
+        var username = baseUsername;
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            if (!await _db.Users.AnyAsync(u => u.Username == username, cancellationToken))
+                break;
+            username = baseUsername + Random.Shared.Next(10, 9999);
+            if (attempt == 4)
+                return Result<AuthResponse>.Fail("Could not allocate a unique username, please try again.");
+        }
+
+        var fullName = !string.IsNullOrWhiteSpace(request.FullName)
+            ? request.FullName
+            : request.Name;
 
         var user = new User
         {
             Username = username,
             Email = email,
             PasswordHash = _passwordHasher.HashPassword(request.Password),
-            FullName = request.FullName,
+            FullName = fullName,
             Role = UserRole.User,
         };
 
@@ -58,7 +84,11 @@ public class AuthService : IAuthService
 
     public async Task<Result<AuthResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
-        var identifier = request.EmailOrUsername.Trim();
+        var identifierRaw = request.GetIdentifier();
+        if (string.IsNullOrWhiteSpace(identifierRaw))
+            return Result<AuthResponse>.Fail("Invalid credentials.");
+
+        var identifier = identifierRaw.Trim();
         var emailLower = identifier.ToLowerInvariant();
 
         var user = await _db.Users.FirstOrDefaultAsync(
@@ -150,26 +180,84 @@ public class AuthService : IAuthService
         if (user is null)
             return Result<UserDto>.Fail("User not found.");
 
-        user.FullName = request.FullName;
-        user.AvatarUrl = request.AvatarUrl;
+        var (existingFirst, existingLast) = SplitFullName(user.FullName);
+        var firstName = !string.IsNullOrWhiteSpace(request.FirstName) ? request.FirstName : existingFirst;
+        var lastName = !string.IsNullOrWhiteSpace(request.LastName) ? request.LastName : existingLast;
+
+        var fullName = !string.IsNullOrWhiteSpace(request.FullName)
+            ? request.FullName
+            : JoinName(firstName, lastName) ?? user.FullName;
+
+        user.FullName = fullName;
+        user.AvatarUrl = request.AvatarUrl ?? user.AvatarUrl;
         user.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(cancellationToken);
         return Result<UserDto>.Ok(MapToDto(user));
     }
 
-    private static UserDto MapToDto(User user) => new(
-        user.Id,
-        user.Username,
-        user.Email,
-        user.FullName,
-        user.AvatarUrl,
-        user.Role.ToString(),
-        user.CreatedAt);
+    private static UserDto MapToDto(User user)
+    {
+        var (firstName, lastName) = SplitFullName(user.FullName);
+        return new UserDto(
+            user.Id,
+            user.Username,
+            user.Email,
+            user.FullName,
+            firstName,
+            lastName,
+            user.AvatarUrl,
+            user.AvatarUrl,
+            user.Role.ToString().ToLowerInvariant(),
+            user.CreatedAt,
+            user.UpdatedAt);
+    }
 
-    private AuthResponse BuildResponse(User user, string accessToken, string refreshToken) => new(
-        accessToken,
-        refreshToken,
-        _tokenService.GetAccessTokenExpiry(),
-        MapToDto(user));
+    private AuthResponse BuildResponse(User user, string accessToken, string refreshToken) => new()
+    {
+        AccessToken = accessToken,
+        RefreshToken = refreshToken,
+        AccessTokenExpiry = _tokenService.GetAccessTokenExpiry(),
+        User = MapToDto(user),
+    };
+
+    private static string GenerateUsernameFromName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return string.Empty;
+
+        var lower = name.Trim().ToLowerInvariant();
+        var sb = new StringBuilder(lower.Length);
+        foreach (var c in lower)
+        {
+            if (char.IsLetterOrDigit(c)) sb.Append(c);
+            else if (char.IsWhiteSpace(c)) sb.Append('_');
+        }
+
+        var cleaned = sb.ToString().Trim('_');
+        if (cleaned.Length == 0) return string.Empty;
+        return cleaned.Length > 20 ? cleaned.Substring(0, 20) : cleaned;
+    }
+
+    private static (string? First, string? Last) SplitFullName(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName)) return (null, null);
+
+        var trimmed = fullName.Trim();
+        var spaceIdx = trimmed.IndexOf(' ');
+        if (spaceIdx < 0) return (trimmed, null);
+
+        var first = trimmed.Substring(0, spaceIdx);
+        var rest = trimmed.Substring(spaceIdx + 1).Trim();
+        return (first, string.IsNullOrEmpty(rest) ? null : rest);
+    }
+
+    private static string? JoinName(string? first, string? last)
+    {
+        var f = string.IsNullOrWhiteSpace(first) ? null : first.Trim();
+        var l = string.IsNullOrWhiteSpace(last) ? null : last.Trim();
+        if (f is null && l is null) return null;
+        if (f is null) return l;
+        if (l is null) return f;
+        return $"{f} {l}";
+    }
 }

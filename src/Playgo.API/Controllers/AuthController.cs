@@ -59,6 +59,10 @@ public class AuthController : ControllerBase
     }
 
     [Authorize]
+    [HttpGet("profile")]
+    public Task<IActionResult> Profile(CancellationToken ct) => Me(ct);
+
+    [Authorize]
     [HttpPut("me")]
     public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request, CancellationToken ct)
     {

@@ -1,14 +1,27 @@
+using System.Text.Json.Serialization;
+
 namespace Playgo.Application.DTOs.Auth;
 
-public record RegisterRequest(
-    string Username,
-    string Email,
-    string Password,
-    string? FullName);
+public class LoginRequest
+{
+    public string? EmailOrUsername { get; set; }
+    public string? Email { get; set; }
+    public string Password { get; set; } = string.Empty;
 
-public record LoginRequest(
-    string EmailOrUsername,
-    string Password);
+    public string GetIdentifier() =>
+        !string.IsNullOrWhiteSpace(EmailOrUsername) ? EmailOrUsername!
+        : !string.IsNullOrWhiteSpace(Email) ? Email!
+        : string.Empty;
+}
+
+public class RegisterRequest
+{
+    public string? Username { get; set; }
+    public string? Name { get; set; }
+    public string? FullName { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
 
 public record RefreshTokenRequest(
     string AccessToken,
@@ -19,18 +32,30 @@ public record UserDto(
     string Username,
     string Email,
     string? FullName,
+    string? FirstName,
+    string? LastName,
     string? AvatarUrl,
+    string? Avatar,
     string Role,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    DateTime? UpdatedAt);
 
-public record AuthResponse(
-    string AccessToken,
-    string RefreshToken,
-    DateTime AccessTokenExpiry,
-    UserDto User);
+public class AuthResponse
+{
+    public string AccessToken { get; set; } = string.Empty;
+
+    [JsonInclude]
+    public string Token => AccessToken;
+
+    public string RefreshToken { get; set; } = string.Empty;
+    public DateTime AccessTokenExpiry { get; set; }
+    public UserDto User { get; set; } = null!;
+}
 
 public record UpdateProfileRequest(
     string? FullName,
+    string? FirstName,
+    string? LastName,
     string? AvatarUrl);
 
 public record ChangePasswordRequest(
