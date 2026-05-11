@@ -21,6 +21,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Favorite> Favorites => Set<Favorite>();
     public DbSet<WatchHistory> WatchHistories => Set<WatchHistory>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

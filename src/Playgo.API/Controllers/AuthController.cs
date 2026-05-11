@@ -74,6 +74,22 @@ public class AuthController : ControllerBase
         return HandleNoContent(result);
     }
 
+    [Authorize]
+    [HttpGet("me/preferences")]
+    public async Task<IActionResult> GetPreferences(CancellationToken ct)
+    {
+        var result = await _authService.GetPreferencesAsync(User.GetUserId(), ct);
+        return HandleResult(result);
+    }
+
+    [Authorize]
+    [HttpPut("me/preferences")]
+    public async Task<IActionResult> UpdatePreferences([FromBody] UpdatePreferencesRequest request, CancellationToken ct)
+    {
+        var result = await _authService.UpdatePreferencesAsync(User.GetUserId(), request, ct);
+        return HandleResult(result);
+    }
+
     private IActionResult HandleResult<T>(Result<T> result)
     {
         if (!result.Success) return BadRequest(new { error = result.Error });

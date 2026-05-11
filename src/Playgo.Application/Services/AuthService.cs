@@ -51,6 +51,13 @@ public class AuthService : IAuthService
         user.LastLoginAt = DateTime.UtcNow;
 
         _db.Users.Add(user);
+        _db.UserPreferences.Add(new UserPreferences
+        {
+            UserId = user.Id,
+            Language = PreferredLanguage.En,
+            Quality = PreferredQuality.Auto,
+            Autoplay = true,
+        });
         await _db.SaveChangesAsync(cancellationToken);
 
         return Result<AuthResponse>.Ok(BuildResponse(user, accessToken, refreshToken));
@@ -121,7 +128,9 @@ public class AuthService : IAuthService
 
     public async Task<Result<UserDto>> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
+        var user = await _db.Users
+            .Include(u => u.Preferences)
+            .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
         if (user is null)
             return Result<UserDto>.Fail("User not found.");
 
@@ -172,4 +181,83 @@ public class AuthService : IAuthService
         refreshToken,
         _tokenService.GetAccessTokenExpiry(),
         MapToDto(user));
+
+    public async Task<Result<UserPreferencesDto>> GetPreferencesAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await _db.Users
+            .Include(u => u.Preferences)
+            .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
+        if (user is null)
+            return Result<UserPreferencesDto>.Fail("User not found.");
+
+        if (user.Preferences is null)
+        {
+            user.Preferences = new UserPreferences
+            {
+                UserId = user.Id,
+                Language = PreferredLanguage.En,
+                Quality = PreferredQuality.Auto,
+                Autoplay = true,
+                EmailNotifications = true,
+                PushNotifications = false,
+            };
+            _db.UserPreferences.Add(user.Preferences);
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Result<UserPreferencesDto>.Ok(MapPreferences(user.Preferences));
+    }
+
+    public async Task<Result<UserPreferencesDto>> UpdatePreferencesAsync(Guid userId, UpdatePreferencesRequest request, CancellationToken cancellationToken = default)
+    {
+        var userExists = await _db.Users.AnyAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
+        if (!userExists)
+            return Result<UserPreferencesDto>.Fail("User not found.");
+
+        var prefs = await _db.UserPreferences.FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+        var isNew = false;
+        if (prefs is null)
+        {
+            prefs = new UserPreferences
+            {
+                UserId = userId,
+                Language = PreferredLanguage.En,
+                Quality = PreferredQuality.Auto,
+                Autoplay = true,
+                EmailNotifications = true,
+                PushNotifications = false,
+            };
+            isNew = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Language))
+        {
+            if (!Enum.TryParse<PreferredLanguage>(request.Language, ignoreCase: true, out var lang))
+                return Result<UserPreferencesDto>.Fail($"Invalid language value: '{request.Language}'.");
+            prefs.Language = lang;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Quality))
+        {
+            if (!Enum.TryParse<PreferredQuality>(request.Quality, ignoreCase: true, out var quality))
+                return Result<UserPreferencesDto>.Fail($"Invalid quality value: '{request.Quality}'.");
+            prefs.Quality = quality;
+        }
+
+        if (request.Autoplay.HasValue) prefs.Autoplay = request.Autoplay.Value;
+        if (request.EmailNotifications.HasValue) prefs.EmailNotifications = request.EmailNotifications.Value;
+        if (request.PushNotifications.HasValue) prefs.PushNotifications = request.PushNotifications.Value;
+
+        if (isNew) _db.UserPreferences.Add(prefs);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Result<UserPreferencesDto>.Ok(MapPreferences(prefs));
+    }
+
+    private static UserPreferencesDto MapPreferences(UserPreferences prefs) => new(
+        prefs.Language.ToString(),
+        prefs.Quality.ToString(),
+        prefs.Autoplay,
+        prefs.EmailNotifications,
+        prefs.PushNotifications);
 }

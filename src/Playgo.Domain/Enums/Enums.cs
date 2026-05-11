@@ -29,3 +29,19 @@ public enum UserRole
     Moderator = 2,
     Admin = 3
 }
+
+public enum PreferredLanguage
+{
+    Uz = 1,
+    Ru = 2,
+    En = 3
+}
+
+public enum PreferredQuality
+{
+    Auto = 0,
+    SD480 = 1,
+    HD720 = 2,
+    FHD1080 = 3,
+    UHD4K = 4
+}

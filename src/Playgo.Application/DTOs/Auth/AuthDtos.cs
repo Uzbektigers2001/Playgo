@@ -36,3 +36,17 @@ public record UpdateProfileRequest(
 public record ChangePasswordRequest(
     string CurrentPassword,
     string NewPassword);
+
+public record UserPreferencesDto(
+    string Language,
+    string Quality,
+    bool Autoplay,
+    bool EmailNotifications,
+    bool PushNotifications);
+
+public record UpdatePreferencesRequest(
+    string? Language,
+    string? Quality,
+    bool? Autoplay,
+    bool? EmailNotifications,
+    bool? PushNotifications);

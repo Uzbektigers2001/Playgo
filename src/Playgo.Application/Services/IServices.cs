@@ -13,6 +13,8 @@ public interface IAuthService
     Task<Result<UserDto>> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<Result> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken = default);
     Task<Result<UserDto>> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken cancellationToken = default);
+    Task<Result<UserPreferencesDto>> GetPreferencesAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<Result<UserPreferencesDto>> UpdatePreferencesAsync(Guid userId, UpdatePreferencesRequest request, CancellationToken cancellationToken = default);
 }
 
 public interface IContentService
