@@ -1,0 +1,72 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: playgo-api
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=playgo;Username=playgo;Password=${DB_PASSWORD}
+      - ConnectionStrings__Redis=redis:6379
+      - JwtSettings__Secret=${JWT_SECRET}
+      - JwtSettings__Issuer=Playgo
+      - JwtSettings__Audience=PlaygoUsers
+      - JwtSettings__AccessTokenMinutes=15
+      - JwtSettings__RefreshTokenDays=7
+      - FileStorage__BaseUrl=${API_BASE_URL:-http://localhost:8080}
+      - FileStorage__UploadPath=wwwroot/uploads
+      - AllowedOrigins__0=${FRONTEND_URL:-http://localhost:3000}
+    volumes:
+      - uploads_data:/app/wwwroot/uploads
+      - logs_data:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - playgo-net
+
+  db:
+    image: postgres:16-alpine
+    container_name: playgo-db
+    environment:
+      POSTGRES_DB: playgo
+      POSTGRES_USER: playgo
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U playgo -d playgo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - playgo-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: playgo-redis
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - playgo-net
+
+volumes:
+  pg_data:
+  redis_data:
+  uploads_data:
+  logs_data:
+
+networks:
+  playgo-net:
+    driver: bridge

@@ -1,0 +1,57 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{BBC3F5D9-5396-4F9D-A924-1D48603F85D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playgo.Domain", "src\Playgo.Domain\Playgo.Domain.csproj", "{F7BB01AB-E532-473F-92EF-E2F1CB578590}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playgo.Application", "src\Playgo.Application\Playgo.Application.csproj", "{858E19D7-CD69-447E-AE07-7636254B57DF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playgo.Infrastructure", "src\Playgo.Infrastructure\Playgo.Infrastructure.csproj", "{FED59A61-51FA-4B7E-8FBF-4D0F6CF839BB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playgo.API", "src\Playgo.API\Playgo.API.csproj", "{3C86DC7A-C7F1-49C8-B0B8-FA44D0371D61}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{C25717DE-5074-4097-AA41-6DB6D0FDE701}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playgo.Tests", "tests\Playgo.Tests\Playgo.Tests.csproj", "{2CF66CAE-9C08-47BB-9C40-6D86ADE421B6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F7BB01AB-E532-473F-92EF-E2F1CB578590}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7BB01AB-E532-473F-92EF-E2F1CB578590}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7BB01AB-E532-473F-92EF-E2F1CB578590}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7BB01AB-E532-473F-92EF-E2F1CB578590}.Release|Any CPU.Build.0 = Release|Any CPU
+		{858E19D7-CD69-447E-AE07-7636254B57DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{858E19D7-CD69-447E-AE07-7636254B57DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{858E19D7-CD69-447E-AE07-7636254B57DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{858E19D7-CD69-447E-AE07-7636254B57DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FED59A61-51FA-4B7E-8FBF-4D0F6CF839BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FED59A61-51FA-4B7E-8FBF-4D0F6CF839BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FED59A61-51FA-4B7E-8FBF-4D0F6CF839BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FED59A61-51FA-4B7E-8FBF-4D0F6CF839BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C86DC7A-C7F1-49C8-B0B8-FA44D0371D61}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C86DC7A-C7F1-49C8-B0B8-FA44D0371D61}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C86DC7A-C7F1-49C8-B0B8-FA44D0371D61}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C86DC7A-C7F1-49C8-B0B8-FA44D0371D61}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2CF66CAE-9C08-47BB-9C40-6D86ADE421B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2CF66CAE-9C08-47BB-9C40-6D86ADE421B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2CF66CAE-9C08-47BB-9C40-6D86ADE421B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2CF66CAE-9C08-47BB-9C40-6D86ADE421B6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F7BB01AB-E532-473F-92EF-E2F1CB578590} = {BBC3F5D9-5396-4F9D-A924-1D48603F85D2}
+		{858E19D7-CD69-447E-AE07-7636254B57DF} = {BBC3F5D9-5396-4F9D-A924-1D48603F85D2}
+		{FED59A61-51FA-4B7E-8FBF-4D0F6CF839BB} = {BBC3F5D9-5396-4F9D-A924-1D48603F85D2}
+		{3C86DC7A-C7F1-49C8-B0B8-FA44D0371D61} = {BBC3F5D9-5396-4F9D-A924-1D48603F85D2}
+		{2CF66CAE-9C08-47BB-9C40-6D86ADE421B6} = {C25717DE-5074-4097-AA41-6DB6D0FDE701}
+	EndGlobalSection
+EndGlobal

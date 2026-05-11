@@ -1,0 +1,23 @@
+version: '3.9'
+
+services:
+  api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=playgo_dev;Username=playgo;Password=playgo123
+      - ConnectionStrings__Redis=redis:6379
+      - JwtSettings__Secret=dev_secret_min_32_characters_long_key!!
+      - FileStorage__BaseUrl=http://localhost:8080
+    ports:
+      - "8080:8080"
+
+  db:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: playgo_dev
+      POSTGRES_PASSWORD: playgo123
+
+  redis:
+    ports:
+      - "6379:6379"

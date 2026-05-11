@@ -1,0 +1,6 @@
+@Playgo.API_HostAddress = http://localhost:5182
+
+GET {{Playgo.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -55,3 +55,11 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Playgo
+logs/
+wwwroot/uploads/images/*
+wwwroot/uploads/videos/*
+!wwwroot/uploads/images/.gitkeep
+!wwwroot/uploads/videos/.gitkeep
+
