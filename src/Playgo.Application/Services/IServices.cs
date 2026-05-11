@@ -27,6 +27,10 @@ public interface IContentService
     Task<Result<ContentDetailDto>> UpdateAsync(Guid id, UpdateContentRequest request, CancellationToken cancellationToken = default);
     Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task IncrementViewCountAsync(Guid contentId, CancellationToken cancellationToken = default);
+
+    Task<Result<ContentTranslationDto>> UpsertTranslationAsync(Guid contentId, UpsertContentTranslationRequest request, CancellationToken cancellationToken = default);
+    Task<Result> DeleteTranslationAsync(Guid contentId, string languageCode, CancellationToken cancellationToken = default);
+    Task<List<ContentTranslationDto>> GetTranslationsAsync(Guid contentId, CancellationToken cancellationToken = default);
 }
 
 public interface IGenreService
@@ -34,6 +38,10 @@ public interface IGenreService
     Task<List<GenreDto>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<Result<GenreDto>> CreateAsync(CreateGenreRequest request, CancellationToken cancellationToken = default);
     Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<Result<GenreTranslationDto>> UpsertTranslationAsync(Guid genreId, UpsertGenreTranslationRequest request, CancellationToken cancellationToken = default);
+    Task<Result> DeleteTranslationAsync(Guid genreId, string languageCode, CancellationToken cancellationToken = default);
+    Task<List<GenreTranslationDto>> GetTranslationsAsync(Guid genreId, CancellationToken cancellationToken = default);
 }
 
 public interface ISeasonEpisodeService

@@ -63,4 +63,11 @@ public class ContentsController : ControllerBase
         await _contentService.IncrementViewCountAsync(id, ct);
         return NoContent();
     }
+
+    [HttpGet("{id:guid}/translations")]
+    public async Task<IActionResult> Translations(Guid id, CancellationToken ct)
+    {
+        var items = await _contentService.GetTranslationsAsync(id, ct);
+        return Ok(items);
+    }
 }

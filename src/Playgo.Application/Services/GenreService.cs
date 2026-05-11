@@ -62,6 +62,77 @@ public class GenreService : IGenreService
         return Result.Ok();
     }
 
+    public async Task<Result<GenreTranslationDto>> UpsertTranslationAsync(Guid genreId, UpsertGenreTranslationRequest request, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.LanguageCode))
+            return Result<GenreTranslationDto>.Fail("languageCode is required.");
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return Result<GenreTranslationDto>.Fail("name is required.");
+
+        var genreExists = await _db.Genres.AnyAsync(g => g.Id == genreId && !g.IsDeleted, cancellationToken);
+        if (!genreExists)
+            return Result<GenreTranslationDto>.Fail("Genre not found.");
+
+        var lang = NormalizeLangOrDefault(request.LanguageCode);
+
+        var existing = await _db.GenreTranslations
+            .FirstOrDefaultAsync(t => t.GenreId == genreId && t.LanguageCode == lang, cancellationToken);
+
+        if (existing is null)
+        {
+            existing = new GenreTranslation
+            {
+                GenreId = genreId,
+                LanguageCode = lang,
+                Name = request.Name,
+                Description = request.Description,
+            };
+            _db.GenreTranslations.Add(existing);
+        }
+        else
+        {
+            existing.Name = request.Name;
+            existing.Description = request.Description;
+            existing.IsDeleted = false;
+            existing.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+        return Result<GenreTranslationDto>.Ok(new GenreTranslationDto(existing.LanguageCode, existing.Name, existing.Description));
+    }
+
+    public async Task<Result> DeleteTranslationAsync(Guid genreId, string languageCode, CancellationToken cancellationToken = default)
+    {
+        var lang = NormalizeLangOrDefault(languageCode);
+        var existing = await _db.GenreTranslations
+            .FirstOrDefaultAsync(t => t.GenreId == genreId && t.LanguageCode == lang && !t.IsDeleted, cancellationToken);
+
+        if (existing is null)
+            return Result.Fail("Translation not found.");
+
+        existing.IsDeleted = true;
+        existing.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+        return Result.Ok();
+    }
+
+    public async Task<List<GenreTranslationDto>> GetTranslationsAsync(Guid genreId, CancellationToken cancellationToken = default)
+    {
+        return await _db.GenreTranslations
+            .AsNoTracking()
+            .Where(t => t.GenreId == genreId && !t.IsDeleted)
+            .OrderBy(t => t.LanguageCode)
+            .Select(t => new GenreTranslationDto(t.LanguageCode, t.Name, t.Description))
+            .ToListAsync(cancellationToken);
+    }
+
+    private static string NormalizeLangOrDefault(string? lang)
+    {
+        if (string.IsNullOrWhiteSpace(lang)) return "en";
+        var lower = lang.Trim().ToLowerInvariant();
+        return lower is "uz" or "ru" or "en" ? lower : "en";
+    }
+
     private static string GenerateSlug(string input)
     {
         if (string.IsNullOrWhiteSpace(input)) return string.Empty;

@@ -130,6 +130,34 @@ tests/
 
 ---
 
+## i18n support
+
+Content and Genre carry per-language overrides via `ContentTranslation` and `GenreTranslation`. The original columns on `Content`/`Genre` are kept as the **primary (default) locale** and serve as a fallback when no translation matches the requested language.
+
+Supported languages: `uz`, `ru`, `en`. Default fallback: `en`, then the primary columns.
+
+### Request language detection
+The active language is resolved per-request by `ILocalizationContext` in this order:
+1. Query string `?lang=uz|ru|en` (overrides everything).
+2. `Accept-Language` header — the first supported primary tag wins (e.g. `Accept-Language: ru-RU,en;q=0.5` → `ru`).
+3. Default `en`.
+
+When the resolved language matches a translation, `GET /api/contents/{id}` and `GET /api/contents/slug/{slug}` return the localized `title`, `originalTitle`, `description`, `shortDescription`, `director`, `cast` at the top level. The full `translations` array is always present so clients can render any language without a second round-trip.
+
+### Endpoints
+| Method | Route | Auth | Purpose |
+|--------|-------|------|---------|
+| GET | `/api/contents/{id}/translations` | — | All translations for a content. |
+| POST | `/api/admin/contents/{contentId}/translations` | Admin | Upsert a translation. Idempotent per `(contentId, languageCode)`. |
+| DELETE | `/api/admin/contents/{contentId}/translations/{lang}` | Admin | Soft-delete a translation. |
+| GET | `/api/genres/{genreId}/translations` | — | All translations for a genre. |
+| POST | `/api/genres/{genreId}/translations` | Admin | Upsert genre translation. |
+| DELETE | `/api/genres/{genreId}/translations/{lang}` | Admin | Soft-delete genre translation. |
+
+`POST /api/admin/contents` and `PUT /api/admin/contents/{id}` also accept an optional `translations: [{ languageCode, title, originalTitle, description, shortDescription, director, cast }, ...]` array — on update, the previous translations are replaced wholesale by the supplied list.
+
+---
+
 ## Roadmap (keyingi bosqich)
 - [ ] HLS transcoding — FFmpeg worker service
 - [ ] CDN integration — Bunny.net signed URLs

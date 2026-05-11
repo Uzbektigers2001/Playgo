@@ -67,7 +67,8 @@ public record ContentDetailDto(
     long ViewCount,
     bool IsFeatured,
     List<GenreDto> Genres,
-    List<SeasonDto> Seasons);
+    List<SeasonDto> Seasons,
+    List<ContentTranslationDto> Translations);
 
 public record CreateContentRequest(
     string Title,
@@ -89,7 +90,8 @@ public record CreateContentRequest(
     string? Director,
     string? Cast,
     bool IsFeatured,
-    List<Guid> GenreIds);
+    List<Guid> GenreIds,
+    List<UpsertContentTranslationRequest>? Translations = null);
 
 public record UpdateContentRequest(
     string Title,
@@ -113,7 +115,8 @@ public record UpdateContentRequest(
     bool IsFeatured,
     List<Guid> GenreIds,
     ContentStatus Status,
-    bool IsTrending);
+    bool IsTrending,
+    List<UpsertContentTranslationRequest>? Translations = null);
 
 public record CreateSeasonRequest(
     Guid ContentId,
@@ -147,6 +150,7 @@ public class ContentFilterRequest
     public int? Year { get; set; }
     public string? Country { get; set; }
     public string? SortBy { get; set; }
+    public string? Lang { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
 }
