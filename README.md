@@ -103,6 +103,30 @@ dotnet run
 - POST /api/upload/image [Admin] — Rasm yuklash
 - POST /api/upload/video [Admin] — Video yuklash
 
+### Watchlist — /api/watchlist [Auth]
+"Save for later" — separate from Favorites. Soft-deleted entries are revived on re-add so duplicates can't accumulate.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | / | Paged watchlist (ordered by `priority` asc then `createdAt` desc). |
+| POST | /{contentId} | Add. Optional JSON body `{ priority, note }`. Re-add of a removed entry revives the original row. |
+| DELETE | /{contentId} | Soft-remove. |
+| GET | /{contentId}/check | `{ isInWatchlist: bool }`. |
+| PUT | /{contentId}/priority | Body `{ priority, note }`. |
+
+### Playlists — /api/playlists
+User-created collections of content. Owner has full CRUD; public playlists are visible to everyone.
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | /mine | ✓ | Paged playlists of the caller. |
+| GET | /public | — | Paged public playlists, optional `?search=`. |
+| GET | /{id} | optional | Detail with ordered items. Private playlists return 400 to non-owners. |
+| POST | / | ✓ | Create. Body `{ name, description?, isPublic, coverImageUrl? }`. |
+| PUT | /{id} | ✓ owner | Rename / change visibility / cover. |
+| DELETE | /{id} | ✓ owner | Soft-delete playlist AND its items. |
+| POST | /{id}/items | ✓ owner | Add `{ contentId, orderIndex? }`. Defaults to append. Duplicates rejected. |
+| DELETE | /{id}/items/{itemId} | ✓ owner | Remove item. |
+| PUT | /{id}/reorder | ✓ owner | Body `{ itemIdsInOrder: [guid, …] }` — must list every current item exactly once; OrderIndex is reassigned by position. |
+
 ---
 
 ## Environment Variables
