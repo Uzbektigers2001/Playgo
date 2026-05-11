@@ -1,3 +1,5 @@
+using Playgo.Domain.Entities;
+
 namespace Playgo.Application.DTOs.Content;
 
 public record ReviewDto(
@@ -9,7 +11,28 @@ public record ReviewDto(
     int Rating,
     string? Comment,
     int LikesCount,
+    int DislikesCount,
+    string? MyVote,
     DateTime CreatedAt);
+
+public record ToggleVoteRequest(ReviewVoteType VoteType);
+
+public record ReviewVoteResultDto(
+    int LikesCount,
+    int DislikesCount,
+    string? MyVote);
+
+public record RejectReviewRequest(string? Reason);
+
+public class AdminReviewFilter
+{
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+    public Guid? ContentId { get; set; }
+    public bool? IsApproved { get; set; }
+    public Guid? UserId { get; set; }
+    public string? Search { get; set; }
+}
 
 public record CreateReviewRequest(
     Guid ContentId,

@@ -39,5 +39,9 @@ public class Review : BaseEntity
     public int Rating { get; set; }
     public string? Comment { get; set; }
     public int LikesCount { get; set; } = 0;
+    public int DislikesCount { get; set; } = 0;
     public bool IsApproved { get; set; } = true;
+    public string? RejectionReason { get; set; }
+
+    public ICollection<ReviewVote> Votes { get; set; } = new List<ReviewVote>();
 }

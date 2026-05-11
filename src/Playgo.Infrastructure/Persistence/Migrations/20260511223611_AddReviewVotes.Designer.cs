@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Playgo.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using Playgo.Infrastructure.Persistence;
 namespace Playgo.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260511223611_AddReviewVotes")]
+    partial class AddReviewVotes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -301,9 +304,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("DislikesCount")
-                        .HasColumnType("integer");
-
                     b.Property<bool>("IsApproved")
                         .HasColumnType("boolean");
 
@@ -315,9 +315,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("Rating")
                         .HasColumnType("integer");
-
-                    b.Property<string>("RejectionReason")
-                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

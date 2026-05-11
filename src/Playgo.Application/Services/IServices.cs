@@ -1,6 +1,7 @@
 using Playgo.Application.Common;
 using Playgo.Application.DTOs.Auth;
 using Playgo.Application.DTOs.Content;
+using Playgo.Domain.Entities;
 
 namespace Playgo.Application.Services;
 
@@ -50,6 +51,15 @@ public interface IReviewService
     Task<Result<ReviewDto>> CreateAsync(Guid userId, CreateReviewRequest request, CancellationToken cancellationToken = default);
     Task<Result<ReviewDto>> UpdateAsync(Guid userId, Guid reviewId, UpdateReviewRequest request, CancellationToken cancellationToken = default);
     Task<Result> DeleteAsync(Guid userId, Guid reviewId, bool isAdmin, CancellationToken cancellationToken = default);
+    Task<Result<ReviewVoteResultDto>> ToggleVoteAsync(Guid userId, Guid reviewId, ReviewVoteType voteType, CancellationToken cancellationToken = default);
+}
+
+public interface IAdminReviewService
+{
+    Task<PagedResult<ReviewDto>> GetAllAsync(AdminReviewFilter filter, CancellationToken cancellationToken = default);
+    Task<Result> ApproveAsync(Guid reviewId, CancellationToken cancellationToken = default);
+    Task<Result> RejectAsync(Guid reviewId, string? reason, CancellationToken cancellationToken = default);
+    Task<Result> DeleteAsync(Guid reviewId, CancellationToken cancellationToken = default);
 }
 
 public interface IFavoriteService
