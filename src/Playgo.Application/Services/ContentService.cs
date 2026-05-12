@@ -10,21 +10,26 @@ namespace Playgo.Application.Services;
 
 public class ContentService : IContentService
 {
+    private const string CachePrefix = "content:";
+
     private readonly IApplicationDbContext _db;
     private readonly ILocalizationContext _localization;
     private readonly ICurrentUserService? _currentUser;
     private readonly ISubscriptionService? _subscriptionService;
+    private readonly ICacheService? _cache;
 
     public ContentService(
         IApplicationDbContext db,
         ILocalizationContext localization,
         ICurrentUserService? currentUser = null,
-        ISubscriptionService? subscriptionService = null)
+        ISubscriptionService? subscriptionService = null,
+        ICacheService? cache = null)
     {
         _db = db;
         _localization = localization;
         _currentUser = currentUser;
         _subscriptionService = subscriptionService;
+        _cache = cache;
     }
 
     public async Task<PagedResult<ContentListItemDto>> GetContentsAsync(ContentFilterRequest filter, CancellationToken cancellationToken = default)
@@ -88,22 +93,48 @@ public class ContentService : IContentService
 
     public async Task<Result<ContentDetailDto>> GetContentByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        var cacheKey = $"{CachePrefix}id:{id}:{_localization.CurrentLanguage}:{(_currentUser?.UserId?.ToString() ?? "anon")}";
+        if (_cache is not null)
+        {
+            var cached = await _cache.GetAsync<ContentDetailDto>(cacheKey, cancellationToken);
+            if (cached is not null)
+                return Result<ContentDetailDto>.Ok(cached);
+        }
+
         var content = await LoadWithRelationsAsync(c => c.Id == id, cancellationToken);
         if (content is null)
             return Result<ContentDetailDto>.Fail("Content not found.");
 
         var requiresPremium = await ShouldRequirePremiumAsync(content, cancellationToken);
-        return Result<ContentDetailDto>.Ok(MapToDetail(content, _localization.CurrentLanguage, requiresPremium));
+        var dto = MapToDetail(content, _localization.CurrentLanguage, requiresPremium);
+
+        if (_cache is not null)
+            await _cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(10), cancellationToken);
+
+        return Result<ContentDetailDto>.Ok(dto);
     }
 
     public async Task<Result<ContentDetailDto>> GetContentBySlugAsync(string slug, CancellationToken cancellationToken = default)
     {
+        var cacheKey = $"{CachePrefix}slug:{slug}:{_localization.CurrentLanguage}:{(_currentUser?.UserId?.ToString() ?? "anon")}";
+        if (_cache is not null)
+        {
+            var cached = await _cache.GetAsync<ContentDetailDto>(cacheKey, cancellationToken);
+            if (cached is not null)
+                return Result<ContentDetailDto>.Ok(cached);
+        }
+
         var content = await LoadWithRelationsAsync(c => c.Slug == slug, cancellationToken);
         if (content is null)
             return Result<ContentDetailDto>.Fail("Content not found.");
 
         var requiresPremium = await ShouldRequirePremiumAsync(content, cancellationToken);
-        return Result<ContentDetailDto>.Ok(MapToDetail(content, _localization.CurrentLanguage, requiresPremium));
+        var dto = MapToDetail(content, _localization.CurrentLanguage, requiresPremium);
+
+        if (_cache is not null)
+            await _cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(10), cancellationToken);
+
+        return Result<ContentDetailDto>.Ok(dto);
     }
 
     private async Task<bool> ShouldRequirePremiumAsync(Content content, CancellationToken ct)
@@ -118,6 +149,15 @@ public class ContentService : IContentService
 
     public async Task<List<ContentListItemDto>> GetFeaturedAsync(int limit, CancellationToken cancellationToken = default)
     {
+        var lang = _localization.CurrentLanguage;
+        var cacheKey = $"{CachePrefix}featured:limit:{limit}:{lang}";
+        if (_cache is not null)
+        {
+            var cached = await _cache.GetAsync<CachedListWrapper>(cacheKey, cancellationToken);
+            if (cached is not null)
+                return cached.Items;
+        }
+
         var items = await _db.Contents
             .AsNoTracking()
             .Include(c => c.ContentGenres).ThenInclude(cg => cg.Genre)
@@ -127,12 +167,25 @@ public class ContentService : IContentService
             .Take(limit)
             .ToListAsync(cancellationToken);
 
-        var lang = _localization.CurrentLanguage;
-        return items.Select(c => MapToListItem(c, lang)).ToList();
+        var result = items.Select(c => MapToListItem(c, lang)).ToList();
+
+        if (_cache is not null)
+            await _cache.SetAsync(cacheKey, new CachedListWrapper(result), TimeSpan.FromMinutes(5), cancellationToken);
+
+        return result;
     }
 
     public async Task<List<ContentListItemDto>> GetTrendingAsync(int limit, CancellationToken cancellationToken = default)
     {
+        var lang = _localization.CurrentLanguage;
+        var cacheKey = $"{CachePrefix}trending:limit:{limit}:{lang}";
+        if (_cache is not null)
+        {
+            var cached = await _cache.GetAsync<CachedListWrapper>(cacheKey, cancellationToken);
+            if (cached is not null)
+                return cached.Items;
+        }
+
         var items = await _db.Contents
             .AsNoTracking()
             .Include(c => c.ContentGenres).ThenInclude(cg => cg.Genre)
@@ -142,8 +195,12 @@ public class ContentService : IContentService
             .Take(limit)
             .ToListAsync(cancellationToken);
 
-        var lang = _localization.CurrentLanguage;
-        return items.Select(c => MapToListItem(c, lang)).ToList();
+        var result = items.Select(c => MapToListItem(c, lang)).ToList();
+
+        if (_cache is not null)
+            await _cache.SetAsync(cacheKey, new CachedListWrapper(result), TimeSpan.FromMinutes(1), cancellationToken);
+
+        return result;
     }
 
     public async Task<List<ContentListItemDto>> GetSimilarAsync(Guid contentId, int limit, CancellationToken cancellationToken = default)
@@ -231,6 +288,8 @@ public class ContentService : IContentService
         _db.Contents.Add(content);
         await _db.SaveChangesAsync(cancellationToken);
 
+        await InvalidateContentCacheAsync(cancellationToken);
+
         var created = await LoadWithRelationsAsync(c => c.Id == content.Id, cancellationToken);
         return Result<ContentDetailDto>.Ok(MapToDetail(created!, _localization.CurrentLanguage));
     }
@@ -297,6 +356,8 @@ public class ContentService : IContentService
 
         await _db.SaveChangesAsync(cancellationToken);
 
+        await InvalidateContentCacheAsync(cancellationToken);
+
         var updated = await LoadWithRelationsAsync(c => c.Id == id, cancellationToken);
         return Result<ContentDetailDto>.Ok(MapToDetail(updated!, _localization.CurrentLanguage));
     }
@@ -312,6 +373,9 @@ public class ContentService : IContentService
         content.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(cancellationToken);
+
+        await InvalidateContentCacheAsync(cancellationToken);
+
         return Result.Ok();
     }
 
@@ -433,6 +497,12 @@ public class ContentService : IContentService
                 .ThenInclude(s => s.Episodes.Where(e => !e.IsDeleted))
             .Where(c => !c.IsDeleted)
             .FirstOrDefaultAsync(predicate, cancellationToken);
+    }
+
+    private async Task InvalidateContentCacheAsync(CancellationToken cancellationToken)
+    {
+        if (_cache is null) return;
+        await _cache.RemoveByPrefixAsync(CachePrefix, cancellationToken);
     }
 
     private static IEnumerable<UpsertContentTranslationRequest> DistinctByLang(IEnumerable<UpsertContentTranslationRequest> items) =>
@@ -573,5 +643,13 @@ public class ContentService : IContentService
             return Result<StreamUrlsDto>.Fail("Premium subscription required.");
 
         return Result<StreamUrlsDto>.Ok(new StreamUrlsDto(content.HlsManifestUrl, content.VideoUrl));
+    }
+
+    private sealed class CachedListWrapper
+    {
+        public List<ContentListItemDto> Items { get; set; } = new();
+
+        public CachedListWrapper() { }
+        public CachedListWrapper(List<ContentListItemDto> items) { Items = items; }
     }
 }

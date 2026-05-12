@@ -75,3 +75,7 @@ public record UpdatePreferencesRequest(
     bool? Autoplay,
     bool? EmailNotifications,
     bool? PushNotifications);
+
+public record VerifyEmailRequest(string Token);
+public record ForgotPasswordRequest(string Email);
+public record ResetPasswordRequest(string Token, string NewPassword);

@@ -16,6 +16,12 @@ public class User : BaseEntity
     public UserRole Role { get; set; } = UserRole.User;
     public bool IsEmailVerified { get; set; } = false;
 
+    public string? EmailVerificationToken { get; set; }
+    public DateTime? EmailVerificationTokenExpiry { get; set; }
+
+    public string? PasswordResetToken { get; set; }
+    public DateTime? PasswordResetTokenExpiry { get; set; }
+
     public bool IsBanned { get; set; } = false;
     public string? BanReason { get; set; }
     public DateTime? BannedAt { get; set; }
@@ -28,6 +34,7 @@ public class User : BaseEntity
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
     public ICollection<Watchlist> Watchlist { get; set; } = new List<Watchlist>();
     public ICollection<Playlist> Playlists { get; set; } = new List<Playlist>();
+    public ICollection<RefreshTokenEntity> RefreshTokens { get; set; } = new List<RefreshTokenEntity>();
 
     public UserPreferences? Preferences { get; set; }
 }
