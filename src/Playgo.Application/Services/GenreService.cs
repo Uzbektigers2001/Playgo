@@ -9,21 +9,38 @@ namespace Playgo.Application.Services;
 
 public class GenreService : IGenreService
 {
-    private readonly IApplicationDbContext _db;
+    private const string CachePrefix = "genres:";
+    private const string AllCacheKey = CachePrefix + "all";
 
-    public GenreService(IApplicationDbContext db)
+    private readonly IApplicationDbContext _db;
+    private readonly ICacheService? _cache;
+
+    public GenreService(IApplicationDbContext db, ICacheService? cache = null)
     {
         _db = db;
+        _cache = cache;
     }
 
     public async Task<List<GenreDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _db.Genres
+        if (_cache is not null)
+        {
+            var cached = await _cache.GetAsync<CachedGenres>(AllCacheKey, cancellationToken);
+            if (cached is not null)
+                return cached.Items;
+        }
+
+        var items = await _db.Genres
             .AsNoTracking()
             .Where(g => !g.IsDeleted)
             .OrderBy(g => g.Name)
             .Select(g => new GenreDto(g.Id, g.Name, g.Slug, g.IconUrl))
             .ToListAsync(cancellationToken);
+
+        if (_cache is not null)
+            await _cache.SetAsync(AllCacheKey, new CachedGenres(items), TimeSpan.FromMinutes(30), cancellationToken);
+
+        return items;
     }
 
     public async Task<Result<GenreDto>> CreateAsync(CreateGenreRequest request, CancellationToken cancellationToken = default)
@@ -46,6 +63,8 @@ public class GenreService : IGenreService
         _db.Genres.Add(genre);
         await _db.SaveChangesAsync(cancellationToken);
 
+        await InvalidateGenreCacheAsync(cancellationToken);
+
         return Result<GenreDto>.Ok(new GenreDto(genre.Id, genre.Name, genre.Slug, genre.IconUrl));
     }
 
@@ -59,6 +78,9 @@ public class GenreService : IGenreService
         genre.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(cancellationToken);
+
+        await InvalidateGenreCacheAsync(cancellationToken);
+
         return Result.Ok();
     }
 
@@ -98,6 +120,9 @@ public class GenreService : IGenreService
         }
 
         await _db.SaveChangesAsync(cancellationToken);
+
+        await InvalidateGenreCacheAsync(cancellationToken);
+
         return Result<GenreTranslationDto>.Ok(new GenreTranslationDto(existing.LanguageCode, existing.Name, existing.Description));
     }
 
@@ -113,6 +138,9 @@ public class GenreService : IGenreService
         existing.IsDeleted = true;
         existing.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
+
+        await InvalidateGenreCacheAsync(cancellationToken);
+
         return Result.Ok();
     }
 
@@ -124,6 +152,12 @@ public class GenreService : IGenreService
             .OrderBy(t => t.LanguageCode)
             .Select(t => new GenreTranslationDto(t.LanguageCode, t.Name, t.Description))
             .ToListAsync(cancellationToken);
+    }
+
+    private async Task InvalidateGenreCacheAsync(CancellationToken cancellationToken)
+    {
+        if (_cache is null) return;
+        await _cache.RemoveByPrefixAsync(CachePrefix, cancellationToken);
     }
 
     private static string NormalizeLangOrDefault(string? lang)
@@ -139,5 +173,13 @@ public class GenreService : IGenreService
         var lower = input.Trim().ToLowerInvariant();
         var cleaned = Regex.Replace(lower, "[^a-z0-9]+", "-");
         return cleaned.Trim('-');
+    }
+
+    private sealed class CachedGenres
+    {
+        public List<GenreDto> Items { get; set; } = new();
+
+        public CachedGenres() { }
+        public CachedGenres(List<GenreDto> items) { Items = items; }
     }
 }

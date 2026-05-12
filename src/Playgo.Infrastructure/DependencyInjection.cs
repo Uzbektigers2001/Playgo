@@ -3,11 +3,13 @@ using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Playgo.Application.Common.Interfaces;
 using Playgo.Infrastructure.Identity;
 using Playgo.Infrastructure.Persistence;
 using Playgo.Application.Services;
 using Playgo.Infrastructure.Services;
+using Playgo.Infrastructure.Services.Email;
 using Playgo.Infrastructure.Services.Payments;
 using StackExchange.Redis;
 
@@ -15,7 +17,7 @@ namespace Playgo.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, IHostEnvironment? environment = null)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is not configured.");
@@ -50,6 +52,12 @@ public static class DependencyInjection
         services.AddKeyedScoped<IPaymentProviderService, PaymePaymentProvider>("Payme");
         services.AddKeyedScoped<IPaymentProviderService, StripePaymentProvider>("Stripe");
         services.AddKeyedScoped<IPaymentProviderService, ManualPaymentProvider>("Manual");
+
+        services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+        if (environment is not null && environment.IsDevelopment())
+            services.AddScoped<IEmailService, LoggerEmailService>();
+        else
+            services.AddScoped<IEmailService, SmtpEmailService>();
 
         services.AddScoped<HangfireJobs>();
 

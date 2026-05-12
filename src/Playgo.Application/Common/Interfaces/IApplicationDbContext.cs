@@ -25,6 +25,7 @@ public interface IApplicationDbContext
     DbSet<Plan> Plans { get; }
     DbSet<UserSubscription> UserSubscriptions { get; }
     DbSet<Payment> Payments { get; }
+    DbSet<RefreshTokenEntity> RefreshTokens { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -23,10 +23,15 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.AvatarUrl).HasMaxLength(500);
         builder.Property(u => u.RefreshToken).HasMaxLength(500);
 
+        builder.Property(u => u.EmailVerificationToken).HasMaxLength(100);
+        builder.Property(u => u.PasswordResetToken).HasMaxLength(100);
+
         builder.Property(u => u.Role)
             .HasConversion<string>()
             .HasMaxLength(20);
 
         builder.HasIndex(u => u.RefreshToken);
+        builder.HasIndex(u => u.EmailVerificationToken);
+        builder.HasIndex(u => u.PasswordResetToken);
     }
 }

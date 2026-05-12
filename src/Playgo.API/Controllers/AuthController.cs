@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Playgo.API.Extensions;
 using Playgo.Application.Common;
 using Playgo.Application.Common.Interfaces;
@@ -22,6 +23,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
+    [EnableRateLimiting("Register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken ct)
     {
         var result = await _authService.RegisterAsync(request, ct);
@@ -29,6 +31,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("Login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
     {
         var result = await _authService.LoginAsync(request, ct);
@@ -44,9 +47,49 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout(CancellationToken ct)
+    public async Task<IActionResult> Logout([FromBody] LogoutRequest? request, CancellationToken ct)
     {
-        var result = await _authService.LogoutAsync(User.GetUserId(), ct);
+        var result = await _authService.LogoutAsync(User.GetUserId(), request?.RefreshToken, ct);
+        return HandleNoContent(result);
+    }
+
+    [Authorize]
+    [HttpPost("logout-all")]
+    public async Task<IActionResult> LogoutAll(CancellationToken ct)
+    {
+        var result = await _authService.LogoutAllAsync(User.GetUserId(), ct);
+        return HandleNoContent(result);
+    }
+
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request, CancellationToken ct)
+    {
+        var result = await _authService.VerifyEmailAsync(request.Token, ct);
+        return HandleNoContent(result);
+    }
+
+    [Authorize]
+    [HttpPost("resend-verification")]
+    [EnableRateLimiting("Default")]
+    public async Task<IActionResult> ResendVerification(CancellationToken ct)
+    {
+        var result = await _authService.ResendVerificationAsync(User.GetUserId(), ct);
+        return HandleNoContent(result);
+    }
+
+    [HttpPost("forgot-password")]
+    [EnableRateLimiting("Login")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken ct)
+    {
+        await _authService.ForgotPasswordAsync(request.Email, ct);
+        return Ok(new { message = "If an account exists for that email, a reset link has been sent." });
+    }
+
+    [HttpPost("reset-password")]
+    [EnableRateLimiting("Login")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken ct)
+    {
+        var result = await _authService.ResetPasswordAsync(request, ct);
         return HandleNoContent(result);
     }
 
@@ -111,4 +154,6 @@ public class AuthController : ControllerBase
         if (!result.Success) return BadRequest(new { error = result.Error });
         return NoContent();
     }
+
+    public record LogoutRequest(string? RefreshToken);
 }

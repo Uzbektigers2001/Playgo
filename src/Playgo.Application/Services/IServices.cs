@@ -10,12 +10,18 @@ public interface IAuthService
     Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
     Task<Result<AuthResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
     Task<Result<AuthResponse>> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default);
-    Task<Result> LogoutAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<Result> LogoutAsync(Guid userId, string? refreshToken, CancellationToken cancellationToken = default);
+    Task<Result> LogoutAllAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<Result<UserDto>> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<Result> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken = default);
     Task<Result<UserDto>> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken cancellationToken = default);
     Task<Result<UserPreferencesDto>> GetPreferencesAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<Result<UserPreferencesDto>> UpdatePreferencesAsync(Guid userId, UpdatePreferencesRequest request, CancellationToken cancellationToken = default);
+
+    Task<Result> VerifyEmailAsync(string token, CancellationToken cancellationToken = default);
+    Task<Result> ResendVerificationAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<Result> ForgotPasswordAsync(string email, CancellationToken cancellationToken = default);
+    Task<Result> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken = default);
 }
 
 public interface IContentService
