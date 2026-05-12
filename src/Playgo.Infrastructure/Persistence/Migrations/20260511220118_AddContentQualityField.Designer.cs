@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Playgo.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using Playgo.Infrastructure.Persistence;
 namespace Playgo.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260511220118_AddContentQualityField")]
+    partial class AddContentQualityField
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -162,61 +165,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                     b.ToTable("content_genres", (string)null);
                 });
 
-            modelBuilder.Entity("Playgo.Domain.Entities.ContentTranslation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Cast")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("ContentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Director")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LanguageCode")
-                        .IsRequired()
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)");
-
-                    b.Property<string>("OriginalTitle")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("ShortDescription")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ContentId", "LanguageCode")
-                        .IsUnique();
-
-                    b.ToTable("content_translations", (string)null);
-                });
-
             modelBuilder.Entity("Playgo.Domain.Entities.Episode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -343,125 +291,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                     b.ToTable("genres", (string)null);
                 });
 
-            modelBuilder.Entity("Playgo.Domain.Entities.Playlist", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("CoverImageUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsPublic")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsPublic");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("playlists", (string)null);
-                });
-
-            modelBuilder.Entity("Playgo.Domain.Entities.PlaylistItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ContentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("OrderIndex")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("PlaylistId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ContentId");
-
-                    b.HasIndex("PlaylistId", "ContentId")
-                        .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false");
-
-                    b.HasIndex("PlaylistId", "OrderIndex");
-
-                    b.ToTable("playlist_items", (string)null);
-                });
-
-            modelBuilder.Entity("Playgo.Domain.Entities.GenreTranslation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("GenreId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LanguageCode")
-                        .IsRequired()
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GenreId", "LanguageCode")
-                        .IsUnique();
-
-                    b.ToTable("genre_translations", (string)null);
-                });
-
             modelBuilder.Entity("Playgo.Domain.Entities.Review", b =>
                 {
                     b.Property<Guid>("Id")
@@ -478,9 +307,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("DislikesCount")
-                        .HasColumnType("integer");
-
                     b.Property<bool>("IsApproved")
                         .HasColumnType("boolean");
 
@@ -492,9 +318,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("Rating")
                         .HasColumnType("integer");
-
-                    b.Property<string>("RejectionReason")
-                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -512,41 +335,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("reviews", (string)null);
-                });
-
-            modelBuilder.Entity("Playgo.Domain.Entities.ReviewVote", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("ReviewId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("VoteType")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("ReviewId", "UserId")
-                        .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false");
-
-                    b.ToTable("review_votes", (string)null);
                 });
 
             modelBuilder.Entity("Playgo.Domain.Entities.Season", b =>
@@ -660,47 +448,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                     b.ToTable("users", (string)null);
                 });
 
-            modelBuilder.Entity("Playgo.Domain.Entities.UserPreferences", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("Autoplay")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("EmailNotifications")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("Language")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("PushNotifications")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("Quality")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("user_preferences", (string)null);
-                });
-
             modelBuilder.Entity("Playgo.Domain.Entities.WatchHistory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -752,47 +499,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                     b.ToTable("watch_history", (string)null);
                 });
 
-            modelBuilder.Entity("Playgo.Domain.Entities.Watchlist", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ContentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int?>("Priority")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ContentId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("UserId", "ContentId")
-                        .IsUnique()
-                        .HasFilter("\"IsDeleted\" = false");
-
-                    b.ToTable("watchlists", (string)null);
-                });
-
             modelBuilder.Entity("Playgo.Domain.Entities.ContentGenre", b =>
                 {
                     b.HasOne("Playgo.Domain.Entities.Content", "Content")
@@ -810,17 +516,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                     b.Navigation("Content");
 
                     b.Navigation("Genre");
-                });
-
-            modelBuilder.Entity("Playgo.Domain.Entities.ContentTranslation", b =>
-                {
-                    b.HasOne("Playgo.Domain.Entities.Content", "Content")
-                        .WithMany("Translations")
-                        .HasForeignKey("ContentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Content");
                 });
 
             modelBuilder.Entity("Playgo.Domain.Entities.Episode", b =>
@@ -853,47 +548,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Playgo.Domain.Entities.Playlist", b =>
-                {
-                    b.HasOne("Playgo.Domain.Entities.User", "User")
-                        .WithMany("Playlists")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Playgo.Domain.Entities.PlaylistItem", b =>
-                {
-                    b.HasOne("Playgo.Domain.Entities.Content", "Content")
-                        .WithMany()
-                        .HasForeignKey("ContentId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("Playgo.Domain.Entities.Playlist", "Playlist")
-                        .WithMany("Items")
-                        .HasForeignKey("PlaylistId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Content");
-
-                    b.Navigation("Playlist");
-                });
-
-            modelBuilder.Entity("Playgo.Domain.Entities.GenreTranslation", b =>
-                {
-                    b.HasOne("Playgo.Domain.Entities.Genre", "Genre")
-                        .WithMany("Translations")
-                        .HasForeignKey("GenreId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Genre");
-                });
-
             modelBuilder.Entity("Playgo.Domain.Entities.Review", b =>
                 {
                     b.HasOne("Playgo.Domain.Entities.Content", "Content")
@@ -913,25 +567,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Playgo.Domain.Entities.ReviewVote", b =>
-                {
-                    b.HasOne("Playgo.Domain.Entities.Review", "Review")
-                        .WithMany("Votes")
-                        .HasForeignKey("ReviewId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Playgo.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Review");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Playgo.Domain.Entities.Season", b =>
                 {
                     b.HasOne("Playgo.Domain.Entities.Content", "Content")
@@ -941,17 +576,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Content");
-                });
-
-            modelBuilder.Entity("Playgo.Domain.Entities.UserPreferences", b =>
-                {
-                    b.HasOne("Playgo.Domain.Entities.User", "User")
-                        .WithOne("Preferences")
-                        .HasForeignKey("Playgo.Domain.Entities.UserPreferences", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Playgo.Domain.Entities.WatchHistory", b =>
@@ -980,25 +604,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Playgo.Domain.Entities.Watchlist", b =>
-                {
-                    b.HasOne("Playgo.Domain.Entities.Content", "Content")
-                        .WithMany()
-                        .HasForeignKey("ContentId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("Playgo.Domain.Entities.User", "User")
-                        .WithMany("Watchlist")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Content");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Playgo.Domain.Entities.Content", b =>
                 {
                     b.Navigation("ContentGenres");
@@ -1009,26 +614,12 @@ namespace Playgo.Infrastructure.Persistence.Migrations
 
                     b.Navigation("Seasons");
 
-                    b.Navigation("Translations");
-
                     b.Navigation("WatchHistories");
                 });
 
             modelBuilder.Entity("Playgo.Domain.Entities.Genre", b =>
                 {
                     b.Navigation("ContentGenres");
-
-                    b.Navigation("Translations");
-                });
-
-            modelBuilder.Entity("Playgo.Domain.Entities.Playlist", b =>
-                {
-                    b.Navigation("Items");
-                });
-
-            modelBuilder.Entity("Playgo.Domain.Entities.Review", b =>
-                {
-                    b.Navigation("Votes");
                 });
 
             modelBuilder.Entity("Playgo.Domain.Entities.Season", b =>
@@ -1040,15 +631,9 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                 {
                     b.Navigation("Favorites");
 
-                    b.Navigation("Playlists");
-
-                    b.Navigation("Preferences");
-
                     b.Navigation("Reviews");
 
                     b.Navigation("WatchHistories");
-
-                    b.Navigation("Watchlist");
                 });
 #pragma warning restore 612, 618
         }

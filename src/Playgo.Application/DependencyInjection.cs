@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<IWatchHistoryService, WatchHistoryService>();
         services.AddScoped<IWatchlistService, WatchlistService>();
         services.AddScoped<IPlaylistService, PlaylistService>();
+        services.AddScoped<IMoviesAliasService, MoviesAliasService>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
