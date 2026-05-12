@@ -23,6 +23,12 @@ public static class HangfireJobsSetup
             job => job.RecalculateTrendingAsync(),
             Cron.Hourly(),
             new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+
+        recurringJobManager.AddOrUpdate<HangfireJobs>(
+            "cleanup-old-view-logs",
+            job => job.CleanupOldViewLogsAsync(),
+            "0 3 * * *",
+            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
     }
 }
 
@@ -47,6 +53,24 @@ public class HangfireJobs
         {
             entry.IsDeleted = true;
             entry.UpdatedAt = DateTime.UtcNow;
+        }
+
+        if (stale.Count > 0)
+            await _db.SaveChangesAsync();
+    }
+
+    public async Task CleanupOldViewLogsAsync()
+    {
+        var threshold = DateTime.UtcNow.AddDays(-90);
+
+        var stale = await _db.ContentViewLogs
+            .Where(l => !l.IsDeleted && l.ViewedAt < threshold)
+            .ToListAsync();
+
+        foreach (var log in stale)
+        {
+            log.IsDeleted = true;
+            log.UpdatedAt = DateTime.UtcNow;
         }
 
         if (stale.Count > 0)

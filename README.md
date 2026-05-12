@@ -145,6 +145,33 @@ The public `GET /api/reviews/content/{contentId}` only shows `IsApproved=true` r
 
 ---
 
+## Admin endpoints
+
+The admin panel (Next.js `/admin` plus the legacy HTML pages `/admin/users.html`, `/admin/edit-user.html`, `/admin/index.html`) is wired to three tabs of endpoints. All routes require an `Admin` role JWT (also enforceable via the `AdminOnly` / `AdminOrModerator` policies registered in `Program.cs`).
+
+### Users tab — `/api/admin/users`
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Paged list. Query params: `page`, `pageSize`, `search` (matches username / email / fullName, case-insensitive), `role`, `isBanned`, `isEmailVerified`, `sortBy` (`createdAt` default, `lastLoginAt`, `email`). |
+| GET | `/{id}` | Detail with `reviewsCount`, `favoritesCount`, `watchlistCount`, `playlistsCount`, `banReason`, `bannedAt`, and the user's 10 most recent activities. |
+| PUT | `/{id}` | Body `{ fullName?, avatarUrl?, role?, isBanned?, banReason? }`. Role changes are logged; flipping `isBanned` also clears the user's refresh token. |
+| POST | `/{id}/ban` | Body `{ "reason": "..." }`. Marks the user banned, stores the reason, stamps `BannedAt`, and clears `RefreshToken`. Rejects an admin trying to ban themselves. |
+| POST | `/{id}/unban` | Clears `IsBanned`, `BanReason`, `BannedAt`. |
+| DELETE | `/{id}` | Soft-delete. Rejects an admin trying to delete themselves; clears the deleted user's refresh token. |
+
+### Dashboard tab — `/api/admin/dashboard`
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/stats` | Returns `AdminDashboardStatsDto` — `totalUsers`, `newUsersThisMonth`, `totalContents`, `publishedContents`, `draftContents`, `totalViews`, `totalReviews`, `averageRating`, `totalFavorites`, `totalWatchlists`, plus `recentMovies` (top 5), `recentUsers` (top 5), `topGenres` (top 5 by content count, with `totalViews`), and `viewsLast30Days` (always 30 entries, zero-filled). Cached in Redis under `admin:dashboard:stats` with a 60-second TTL. |
+
+### Reviews tab — `/api/admin/reviews`
+See the [Review moderation](#review-moderation) section above for the full table.
+
+### View logging
+`POST /api/contents/{id}/view` now writes one `ContentViewLog` row per call (capturing `UserId` if authenticated, plus the request `IpAddress` and `UserAgent` truncated to 45/500 chars). These rows drive the `viewsLast30Days` series on the dashboard. The Hangfire recurring job `cleanup-old-view-logs` (daily 03:00 UTC) soft-deletes anything older than 90 days.
+
+---
+
 ## Environment Variables
 
 | Variable | Description | Example |

@@ -50,6 +50,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Migration `AddWatchlistAndPlaylists` creates `watchlists`, `playlists`, `playlist_items` tables with the partial unique indexes above.
 - 11 unit tests added (`WatchlistServiceTests` x5, `PlaylistServiceTests` x6) covering happy paths, ownership enforcement, dup prevention, pagination, reorder, public visibility, and soft-delete cascade.
 
+### Phase 3: Admin Features (Prompt 7)
+- User ban functionality with reason and audit fields — `User.IsBanned`, `User.BanReason`, `User.BannedAt`. Ban clears `RefreshToken` so the user is effectively logged out immediately.
+- New `ContentViewLog` entity for analytics — captures `ContentId`, optional `UserId`, `ViewedAt`, `IpAddress` (45 char max), `UserAgent` (500 char max). `POST /api/contents/{id}/view` now writes a log row alongside incrementing the counter; values are pulled from `ICurrentUserService` (extended with `IpAddress`/`UserAgent`).
+- Admin Users CRUD (`/api/admin/users`) with search (username/email/fullName, case-insensitive), filters (role/isBanned/isEmailVerified), sort (`createdAt` default, `lastLoginAt`, `email`), pagination, ban/unban, self-protection (admin cannot ban or delete themselves), and a detail endpoint that bundles `reviewsCount` / `favoritesCount` / `watchlistCount` / `playlistsCount` plus the user's 10 most recent activities.
+- Admin Dashboard Stats endpoint (`GET /api/admin/dashboard/stats`) returning totals (users, contents, views, reviews, favorites, watchlists), `newUsersThisMonth`, `publishedContents`/`draftContents`, recent movies (top 5), recent users (top 5), `topGenres` (top 5 by content count with `totalViews`), and `viewsLast30Days` (always 30 zero-filled entries built from `ContentViewLogs`).
+- Redis caching foundation — `ICacheService` abstraction plus `RedisCacheService` implementation backed by `IDistributedCache`. `RemoveByPrefixAsync` uses `IConnectionMultiplexer` (`StackExchange.Redis`) and a `SCAN`-based key sweep. Dashboard stats cache key `admin:dashboard:stats` with a 60-second TTL.
+- Authorization policies `AdminOnly` and `AdminOrModerator` registered in `Program.cs` for future per-policy attribute usage (existing controllers continue to use `[Authorize(Roles = "Admin")]`).
+- Hangfire recurring job `cleanup-old-view-logs` (daily 03:00 UTC) soft-deletes `ContentViewLogs` older than 90 days.
+- 8 new unit tests — `AdminUserServiceTests` x6 (search, filter, ban, unban, cannot-ban-self, cannot-delete-self) and `AdminDashboardServiceTests` x2 (stats aggregation + 60s cache hit on second call).
+- Migrations:
+  - `AddUserBanFields` — three new columns on `users`: `IsBanned bool NOT NULL DEFAULT false`, `BanReason text NULL`, `BannedAt timestamptz NULL`.
+  - `AddContentViewLogs` — creates `content_view_logs` with indexes on `ContentId` and `ViewedAt`, FKs to `contents` and `users` (`NoAction` on delete; `UserId` nullable for anonymous views).
+
 ### Phase 2: Review Votes & Moderation (Prompt 6)
 - New `ReviewVote` entity with `Like` / `Dislike` toggle semantics — same-type vote cancels, opposite-type swaps and adjusts both counters in a single `SaveChangesAsync`. Soft-deleted votes are revived on re-vote so the partial unique index `(ReviewId, UserId) WHERE "IsDeleted" = false` keeps history clean.
 - `Review.DislikesCount` and `Review.RejectionReason` fields added; existing `LikesCount` stays. Counters are mutated alongside the votes navigation, never via separate write paths.

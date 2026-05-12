@@ -22,6 +22,8 @@ public interface ICurrentUserService
     string? Username { get; }
     string? Role { get; }
     bool IsAuthenticated { get; }
+    string? IpAddress { get; }
+    string? UserAgent { get; }
 }
 
 public interface IFileStorageService
