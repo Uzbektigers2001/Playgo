@@ -15,6 +15,8 @@ public interface IApplicationDbContext
     DbSet<WatchHistory> WatchHistories { get; }
     DbSet<Review> Reviews { get; }
     DbSet<UserPreferences> UserPreferences { get; }
+    DbSet<ContentTranslation> ContentTranslations { get; }
+    DbSet<GenreTranslation> GenreTranslations { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -73,6 +73,30 @@ public class AdminContentsController : ControllerBase
         return HandleNoContent(result);
     }
 
+    [HttpGet("{contentId:guid}/translations")]
+    public async Task<IActionResult> GetTranslations(Guid contentId, CancellationToken ct)
+    {
+        var items = await _contentService.GetTranslationsAsync(contentId, ct);
+        return Ok(items);
+    }
+
+    [HttpPost("{contentId:guid}/translations")]
+    public async Task<IActionResult> UpsertTranslation(
+        Guid contentId,
+        [FromBody] UpsertContentTranslationRequest request,
+        CancellationToken ct)
+    {
+        var result = await _contentService.UpsertTranslationAsync(contentId, request, ct);
+        return HandleResult(result);
+    }
+
+    [HttpDelete("{contentId:guid}/translations/{lang}")]
+    public async Task<IActionResult> DeleteTranslation(Guid contentId, string lang, CancellationToken ct)
+    {
+        var result = await _contentService.DeleteTranslationAsync(contentId, lang, ct);
+        return HandleNoContent(result);
+    }
+
     private IActionResult HandleResult<T>(Result<T> result)
     {
         if (!result.Success) return BadRequest(new { error = result.Error });

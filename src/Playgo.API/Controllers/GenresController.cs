@@ -40,4 +40,32 @@ public class GenresController : ControllerBase
         if (!result.Success) return BadRequest(new { error = result.Error });
         return NoContent();
     }
+
+    [HttpGet("{genreId:guid}/translations")]
+    public async Task<IActionResult> GetTranslations(Guid genreId, CancellationToken ct)
+    {
+        var items = await _genreService.GetTranslationsAsync(genreId, ct);
+        return Ok(items);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("{genreId:guid}/translations")]
+    public async Task<IActionResult> UpsertTranslation(
+        Guid genreId,
+        [FromBody] UpsertGenreTranslationRequest request,
+        CancellationToken ct)
+    {
+        var result = await _genreService.UpsertTranslationAsync(genreId, request, ct);
+        if (!result.Success) return BadRequest(new { error = result.Error });
+        return Ok(result.Data);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{genreId:guid}/translations/{lang}")]
+    public async Task<IActionResult> DeleteTranslation(Guid genreId, string lang, CancellationToken ct)
+    {
+        var result = await _genreService.DeleteTranslationAsync(genreId, lang, ct);
+        if (!result.Success) return BadRequest(new { error = result.Error });
+        return NoContent();
+    }
 }

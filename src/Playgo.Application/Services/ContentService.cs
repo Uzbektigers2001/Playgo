@@ -11,10 +11,12 @@ namespace Playgo.Application.Services;
 public class ContentService : IContentService
 {
     private readonly IApplicationDbContext _db;
+    private readonly ILocalizationContext _localization;
 
-    public ContentService(IApplicationDbContext db)
+    public ContentService(IApplicationDbContext db, ILocalizationContext localization)
     {
         _db = db;
+        _localization = localization;
     }
 
     public async Task<PagedResult<ContentListItemDto>> GetContentsAsync(ContentFilterRequest filter, CancellationToken cancellationToken = default)
@@ -25,6 +27,7 @@ public class ContentService : IContentService
         var query = _db.Contents
             .AsNoTracking()
             .Include(c => c.ContentGenres).ThenInclude(cg => cg.Genre)
+            .Include(c => c.Translations.Where(t => !t.IsDeleted))
             .Where(c => !c.IsDeleted && c.Status == ContentStatus.Published);
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
@@ -33,7 +36,8 @@ public class ContentService : IContentService
             query = query.Where(c =>
                 c.Title.ToLower().Contains(s) ||
                 (c.OriginalTitle != null && c.OriginalTitle.ToLower().Contains(s)) ||
-                c.Description.ToLower().Contains(s));
+                c.Description.ToLower().Contains(s) ||
+                c.Translations.Any(t => !t.IsDeleted && t.Title.ToLower().Contains(s)));
         }
 
         if (filter.Type.HasValue)
@@ -63,9 +67,11 @@ public class ContentService : IContentService
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
+        var lang = NormalizeLang(filter.Lang) ?? _localization.CurrentLanguage;
+
         return new PagedResult<ContentListItemDto>
         {
-            Items = items.Select(MapToListItem).ToList(),
+            Items = items.Select(c => MapToListItem(c, lang)).ToList(),
             TotalCount = total,
             Page = page,
             PageSize = pageSize,
@@ -78,7 +84,7 @@ public class ContentService : IContentService
         if (content is null)
             return Result<ContentDetailDto>.Fail("Content not found.");
 
-        return Result<ContentDetailDto>.Ok(MapToDetail(content));
+        return Result<ContentDetailDto>.Ok(MapToDetail(content, _localization.CurrentLanguage));
     }
 
     public async Task<Result<ContentDetailDto>> GetContentBySlugAsync(string slug, CancellationToken cancellationToken = default)
@@ -87,7 +93,7 @@ public class ContentService : IContentService
         if (content is null)
             return Result<ContentDetailDto>.Fail("Content not found.");
 
-        return Result<ContentDetailDto>.Ok(MapToDetail(content));
+        return Result<ContentDetailDto>.Ok(MapToDetail(content, _localization.CurrentLanguage));
     }
 
     public async Task<List<ContentListItemDto>> GetFeaturedAsync(int limit, CancellationToken cancellationToken = default)
@@ -95,12 +101,14 @@ public class ContentService : IContentService
         var items = await _db.Contents
             .AsNoTracking()
             .Include(c => c.ContentGenres).ThenInclude(cg => cg.Genre)
+            .Include(c => c.Translations.Where(t => !t.IsDeleted))
             .Where(c => !c.IsDeleted && c.IsFeatured && c.Status == ContentStatus.Published)
             .OrderByDescending(c => c.CreatedAt)
             .Take(limit)
             .ToListAsync(cancellationToken);
 
-        return items.Select(MapToListItem).ToList();
+        var lang = _localization.CurrentLanguage;
+        return items.Select(c => MapToListItem(c, lang)).ToList();
     }
 
     public async Task<List<ContentListItemDto>> GetTrendingAsync(int limit, CancellationToken cancellationToken = default)
@@ -108,12 +116,14 @@ public class ContentService : IContentService
         var items = await _db.Contents
             .AsNoTracking()
             .Include(c => c.ContentGenres).ThenInclude(cg => cg.Genre)
+            .Include(c => c.Translations.Where(t => !t.IsDeleted))
             .Where(c => !c.IsDeleted && c.Status == ContentStatus.Published)
             .OrderByDescending(c => c.ViewCount)
             .Take(limit)
             .ToListAsync(cancellationToken);
 
-        return items.Select(MapToListItem).ToList();
+        var lang = _localization.CurrentLanguage;
+        return items.Select(c => MapToListItem(c, lang)).ToList();
     }
 
     public async Task<List<ContentListItemDto>> GetSimilarAsync(Guid contentId, int limit, CancellationToken cancellationToken = default)
@@ -129,6 +139,7 @@ public class ContentService : IContentService
         var items = await _db.Contents
             .AsNoTracking()
             .Include(c => c.ContentGenres).ThenInclude(cg => cg.Genre)
+            .Include(c => c.Translations.Where(t => !t.IsDeleted))
             .Where(c => !c.IsDeleted
                 && c.Status == ContentStatus.Published
                 && c.Id != contentId
@@ -137,7 +148,8 @@ public class ContentService : IContentService
             .Take(limit)
             .ToListAsync(cancellationToken);
 
-        return items.Select(MapToListItem).ToList();
+        var lang = _localization.CurrentLanguage;
+        return items.Select(c => MapToListItem(c, lang)).ToList();
     }
 
     public async Task<Result<ContentDetailDto>> CreateAsync(CreateContentRequest request, CancellationToken cancellationToken = default)
@@ -177,11 +189,29 @@ public class ContentService : IContentService
         foreach (var gid in request.GenreIds.Distinct())
             content.ContentGenres.Add(new ContentGenre { ContentId = content.Id, GenreId = gid });
 
+        if (request.Translations is { Count: > 0 })
+        {
+            foreach (var t in DistinctByLang(request.Translations))
+            {
+                content.Translations.Add(new ContentTranslation
+                {
+                    ContentId = content.Id,
+                    LanguageCode = NormalizeLangOrDefault(t.LanguageCode),
+                    Title = t.Title,
+                    OriginalTitle = t.OriginalTitle,
+                    Description = t.Description,
+                    ShortDescription = t.ShortDescription,
+                    Director = t.Director,
+                    Cast = t.Cast,
+                });
+            }
+        }
+
         _db.Contents.Add(content);
         await _db.SaveChangesAsync(cancellationToken);
 
         var created = await LoadWithRelationsAsync(c => c.Id == content.Id, cancellationToken);
-        return Result<ContentDetailDto>.Ok(MapToDetail(created!));
+        return Result<ContentDetailDto>.Ok(MapToDetail(created!, _localization.CurrentLanguage));
     }
 
     public async Task<Result<ContentDetailDto>> UpdateAsync(Guid id, UpdateContentRequest request, CancellationToken cancellationToken = default)
@@ -220,10 +250,33 @@ public class ContentService : IContentService
         foreach (var gid in request.GenreIds.Distinct())
             content.ContentGenres.Add(new ContentGenre { ContentId = content.Id, GenreId = gid });
 
+        if (request.Translations is not null)
+        {
+            var existing = await _db.ContentTranslations
+                .Where(t => t.ContentId == id)
+                .ToListAsync(cancellationToken);
+            _db.ContentTranslations.RemoveRange(existing);
+
+            foreach (var t in DistinctByLang(request.Translations))
+            {
+                _db.ContentTranslations.Add(new ContentTranslation
+                {
+                    ContentId = id,
+                    LanguageCode = NormalizeLangOrDefault(t.LanguageCode),
+                    Title = t.Title,
+                    OriginalTitle = t.OriginalTitle,
+                    Description = t.Description,
+                    ShortDescription = t.ShortDescription,
+                    Director = t.Director,
+                    Cast = t.Cast,
+                });
+            }
+        }
+
         await _db.SaveChangesAsync(cancellationToken);
 
         var updated = await LoadWithRelationsAsync(c => c.Id == id, cancellationToken);
-        return Result<ContentDetailDto>.Ok(MapToDetail(updated!));
+        return Result<ContentDetailDto>.Ok(MapToDetail(updated!, _localization.CurrentLanguage));
     }
 
     public async Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
@@ -248,6 +301,87 @@ public class ContentService : IContentService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<Result<ContentTranslationDto>> UpsertTranslationAsync(Guid contentId, UpsertContentTranslationRequest request, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.LanguageCode))
+            return Result<ContentTranslationDto>.Fail("languageCode is required.");
+        if (string.IsNullOrWhiteSpace(request.Title))
+            return Result<ContentTranslationDto>.Fail("title is required.");
+        if (string.IsNullOrWhiteSpace(request.Description))
+            return Result<ContentTranslationDto>.Fail("description is required.");
+
+        var contentExists = await _db.Contents.AnyAsync(c => c.Id == contentId && !c.IsDeleted, cancellationToken);
+        if (!contentExists)
+            return Result<ContentTranslationDto>.Fail("Content not found.");
+
+        var lang = NormalizeLangOrDefault(request.LanguageCode);
+
+        var existing = await _db.ContentTranslations
+            .FirstOrDefaultAsync(t => t.ContentId == contentId && t.LanguageCode == lang, cancellationToken);
+
+        if (existing is null)
+        {
+            existing = new ContentTranslation
+            {
+                ContentId = contentId,
+                LanguageCode = lang,
+                Title = request.Title,
+                OriginalTitle = request.OriginalTitle,
+                Description = request.Description,
+                ShortDescription = request.ShortDescription,
+                Director = request.Director,
+                Cast = request.Cast,
+            };
+            _db.ContentTranslations.Add(existing);
+        }
+        else
+        {
+            existing.Title = request.Title;
+            existing.OriginalTitle = request.OriginalTitle;
+            existing.Description = request.Description;
+            existing.ShortDescription = request.ShortDescription;
+            existing.Director = request.Director;
+            existing.Cast = request.Cast;
+            existing.IsDeleted = false;
+            existing.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+        return Result<ContentTranslationDto>.Ok(MapTranslation(existing));
+    }
+
+    public async Task<Result> DeleteTranslationAsync(Guid contentId, string languageCode, CancellationToken cancellationToken = default)
+    {
+        var lang = NormalizeLangOrDefault(languageCode);
+        var existing = await _db.ContentTranslations
+            .FirstOrDefaultAsync(t => t.ContentId == contentId && t.LanguageCode == lang && !t.IsDeleted, cancellationToken);
+
+        if (existing is null)
+            return Result.Fail("Translation not found.");
+
+        existing.IsDeleted = true;
+        existing.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+        return Result.Ok();
+    }
+
+    public async Task<List<ContentTranslationDto>> GetTranslationsAsync(Guid contentId, CancellationToken cancellationToken = default)
+    {
+        return await _db.ContentTranslations
+            .AsNoTracking()
+            .Where(t => t.ContentId == contentId && !t.IsDeleted)
+            .OrderBy(t => t.LanguageCode)
+            .Select(t => new ContentTranslationDto(
+                t.LanguageCode,
+                t.Title,
+                t.OriginalTitle,
+                t.Description,
+                t.ShortDescription,
+                t.Director,
+                t.Cast))
+            .ToListAsync(cancellationToken);
+    }
+
     private async Task<Content?> LoadWithRelationsAsync(
         System.Linq.Expressions.Expression<Func<Content, bool>> predicate,
         CancellationToken cancellationToken)
@@ -255,10 +389,37 @@ public class ContentService : IContentService
         return await _db.Contents
             .AsNoTracking()
             .Include(c => c.ContentGenres).ThenInclude(cg => cg.Genre)
+            .Include(c => c.Translations.Where(t => !t.IsDeleted))
             .Include(c => c.Seasons.Where(s => !s.IsDeleted))
                 .ThenInclude(s => s.Episodes.Where(e => !e.IsDeleted))
             .Where(c => !c.IsDeleted)
             .FirstOrDefaultAsync(predicate, cancellationToken);
+    }
+
+    private static IEnumerable<UpsertContentTranslationRequest> DistinctByLang(IEnumerable<UpsertContentTranslationRequest> items) =>
+        items
+            .Where(t => !string.IsNullOrWhiteSpace(t.LanguageCode))
+            .GroupBy(t => NormalizeLangOrDefault(t.LanguageCode), StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.Last());
+
+    private static string NormalizeLangOrDefault(string? lang)
+    {
+        var n = NormalizeLang(lang);
+        return n ?? "en";
+    }
+
+    private static string? NormalizeLang(string? lang)
+    {
+        if (string.IsNullOrWhiteSpace(lang)) return null;
+        var lower = lang.Trim().ToLowerInvariant();
+        return lower is "uz" or "ru" or "en" ? lower : null;
+    }
+
+    private static ContentTranslation? PickTranslation(Content c, string lang)
+    {
+        var match = c.Translations.FirstOrDefault(t => !t.IsDeleted && t.LanguageCode == lang);
+        if (match is not null) return match;
+        return c.Translations.FirstOrDefault(t => !t.IsDeleted && t.LanguageCode == "en");
     }
 
     private static string GenerateSlug(string input)
@@ -269,68 +430,90 @@ public class ContentService : IContentService
         return cleaned.Trim('-');
     }
 
-    private static ContentListItemDto MapToListItem(Content c) => new(
-        c.Id,
-        c.Title,
-        c.Slug,
-        c.ShortDescription,
-        c.Type,
-        c.ReleaseYear,
-        c.PosterUrl,
-        c.BackdropUrl,
-        c.AverageRating,
-        c.ViewCount,
-        c.ContentGenres.Select(cg => cg.Genre.Name).ToList());
+    private static ContentTranslationDto MapTranslation(ContentTranslation t) => new(
+        t.LanguageCode,
+        t.Title,
+        t.OriginalTitle,
+        t.Description,
+        t.ShortDescription,
+        t.Director,
+        t.Cast);
 
-    private static ContentDetailDto MapToDetail(Content c) => new(
-        c.Id,
-        c.Title,
-        c.OriginalTitle,
-        c.Slug,
-        c.Description,
-        c.Type,
-        c.Status,
-        c.ReleaseYear,
-        c.ReleaseDate,
-        c.DurationMinutes,
-        c.Country,
-        c.Language,
-        c.AgeRating,
-        c.PosterUrl,
-        c.BackdropUrl,
-        c.TrailerUrl,
-        c.VideoUrl,
-        c.HlsManifestUrl,
-        c.Director,
-        c.Cast,
-        c.AverageRating,
-        c.RatingCount,
-        c.ViewCount,
-        c.IsFeatured,
-        c.ContentGenres
-            .Select(cg => new GenreDto(cg.Genre.Id, cg.Genre.Name, cg.Genre.Slug, cg.Genre.IconUrl))
-            .ToList(),
-        c.Seasons
-            .OrderBy(s => s.SeasonNumber)
-            .Select(s => new SeasonDto(
-                s.Id,
-                s.SeasonNumber,
-                s.Title,
-                s.Description,
-                s.PosterUrl,
-                s.ReleaseDate,
-                s.Episodes
-                    .OrderBy(e => e.EpisodeNumber)
-                    .Select(e => new EpisodeDto(
-                        e.Id,
-                        e.EpisodeNumber,
-                        e.Title,
-                        e.Description,
-                        e.DurationMinutes,
-                        e.ThumbnailUrl,
-                        e.VideoUrl,
-                        e.HlsManifestUrl,
-                        e.ReleaseDate))
-                    .ToList()))
-            .ToList());
+    private static ContentListItemDto MapToListItem(Content c, string lang)
+    {
+        var tr = PickTranslation(c, lang);
+        return new ContentListItemDto(
+            c.Id,
+            tr?.Title ?? c.Title,
+            c.Slug,
+            tr?.ShortDescription ?? c.ShortDescription,
+            c.Type,
+            c.ReleaseYear,
+            c.PosterUrl,
+            c.BackdropUrl,
+            c.AverageRating,
+            c.ViewCount,
+            c.ContentGenres.Select(cg => cg.Genre.Name).ToList());
+    }
+
+    private static ContentDetailDto MapToDetail(Content c, string lang)
+    {
+        var tr = PickTranslation(c, lang);
+        return new ContentDetailDto(
+            c.Id,
+            tr?.Title ?? c.Title,
+            tr?.OriginalTitle ?? c.OriginalTitle,
+            c.Slug,
+            tr?.Description ?? c.Description,
+            c.Type,
+            c.Status,
+            c.ReleaseYear,
+            c.ReleaseDate,
+            c.DurationMinutes,
+            c.Country,
+            c.Language,
+            c.AgeRating,
+            c.PosterUrl,
+            c.BackdropUrl,
+            c.TrailerUrl,
+            c.VideoUrl,
+            c.HlsManifestUrl,
+            tr?.Director ?? c.Director,
+            tr?.Cast ?? c.Cast,
+            c.AverageRating,
+            c.RatingCount,
+            c.ViewCount,
+            c.IsFeatured,
+            c.ContentGenres
+                .Select(cg => new GenreDto(cg.Genre.Id, cg.Genre.Name, cg.Genre.Slug, cg.Genre.IconUrl))
+                .ToList(),
+            c.Seasons
+                .OrderBy(s => s.SeasonNumber)
+                .Select(s => new SeasonDto(
+                    s.Id,
+                    s.SeasonNumber,
+                    s.Title,
+                    s.Description,
+                    s.PosterUrl,
+                    s.ReleaseDate,
+                    s.Episodes
+                        .OrderBy(e => e.EpisodeNumber)
+                        .Select(e => new EpisodeDto(
+                            e.Id,
+                            e.EpisodeNumber,
+                            e.Title,
+                            e.Description,
+                            e.DurationMinutes,
+                            e.ThumbnailUrl,
+                            e.VideoUrl,
+                            e.HlsManifestUrl,
+                            e.ReleaseDate))
+                        .ToList()))
+                .ToList(),
+            c.Translations
+                .Where(t => !t.IsDeleted)
+                .OrderBy(t => t.LanguageCode)
+                .Select(MapTranslation)
+                .ToList());
+    }
 }

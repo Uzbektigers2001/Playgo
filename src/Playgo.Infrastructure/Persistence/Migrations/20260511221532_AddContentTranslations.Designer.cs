@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Playgo.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using Playgo.Infrastructure.Persistence;
 namespace Playgo.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260511221532_AddContentTranslations")]
+    partial class AddContentTranslations
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -340,45 +343,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                     b.ToTable("genres", (string)null);
                 });
 
-            modelBuilder.Entity("Playgo.Domain.Entities.GenreTranslation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("GenreId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LanguageCode")
-                        .IsRequired()
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GenreId", "LanguageCode")
-                        .IsUnique();
-
-                    b.ToTable("genre_translations", (string)null);
-                });
-
             modelBuilder.Entity("Playgo.Domain.Entities.Review", b =>
                 {
                     b.Property<Guid>("Id")
@@ -536,47 +500,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                     b.ToTable("users", (string)null);
                 });
 
-            modelBuilder.Entity("Playgo.Domain.Entities.UserPreferences", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("Autoplay")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("EmailNotifications")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("Language")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("PushNotifications")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("Quality")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("user_preferences", (string)null);
-                });
-
             modelBuilder.Entity("Playgo.Domain.Entities.WatchHistory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -688,17 +611,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Playgo.Domain.Entities.GenreTranslation", b =>
-                {
-                    b.HasOne("Playgo.Domain.Entities.Genre", "Genre")
-                        .WithMany("Translations")
-                        .HasForeignKey("GenreId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Genre");
-                });
-
             modelBuilder.Entity("Playgo.Domain.Entities.Review", b =>
                 {
                     b.HasOne("Playgo.Domain.Entities.Content", "Content")
@@ -727,17 +639,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Content");
-                });
-
-            modelBuilder.Entity("Playgo.Domain.Entities.UserPreferences", b =>
-                {
-                    b.HasOne("Playgo.Domain.Entities.User", "User")
-                        .WithOne("Preferences")
-                        .HasForeignKey("Playgo.Domain.Entities.UserPreferences", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Playgo.Domain.Entities.WatchHistory", b =>
@@ -784,8 +685,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Playgo.Domain.Entities.Genre", b =>
                 {
                     b.Navigation("ContentGenres");
-
-                    b.Navigation("Translations");
                 });
 
             modelBuilder.Entity("Playgo.Domain.Entities.Season", b =>
@@ -796,8 +695,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Playgo.Domain.Entities.User", b =>
                 {
                     b.Navigation("Favorites");
-
-                    b.Navigation("Preferences");
 
                     b.Navigation("Reviews");
 

@@ -10,6 +10,7 @@ public class Genre : BaseEntity
     public string? IconUrl { get; set; }
 
     public ICollection<ContentGenre> ContentGenres { get; set; } = new List<ContentGenre>();
+    public ICollection<GenreTranslation> Translations { get; set; } = new List<GenreTranslation>();
 }
 
 public class ContentGenre

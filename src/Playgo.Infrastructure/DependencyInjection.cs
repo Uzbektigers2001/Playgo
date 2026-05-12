@@ -35,6 +35,7 @@ public static class DependencyInjection
 
         services.AddHttpContextAccessor();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<ILocalizationContext, LocalizationContext>();
 
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
 
