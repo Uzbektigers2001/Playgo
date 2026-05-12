@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Setup
+- Initial project audit and environment setup
+
 ### Phase 2: User Preferences (Prompt 3)
 - New `UserPreferences` entity with `Language` (PreferredLanguage: Uz/Ru/En), `Quality` (PreferredQuality: Auto/SD480/HD720/FHD1080/UHD4K), `Autoplay`, `EmailNotifications`, `PushNotifications`.
 - `User.Preferences` 1:1 navigation; unique index on `user_preferences.UserId` with cascade delete.
