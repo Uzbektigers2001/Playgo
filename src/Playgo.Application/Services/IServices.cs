@@ -34,6 +34,7 @@ public interface IContentService
     Task<Result<ContentTranslationDto>> UpsertTranslationAsync(Guid contentId, UpsertContentTranslationRequest request, CancellationToken cancellationToken = default);
     Task<Result> DeleteTranslationAsync(Guid contentId, string languageCode, CancellationToken cancellationToken = default);
     Task<List<ContentTranslationDto>> GetTranslationsAsync(Guid contentId, CancellationToken cancellationToken = default);
+    Task<Result<StreamUrlsDto>> GetStreamUrlsAsync(Guid contentId, CancellationToken cancellationToken = default);
 }
 
 public interface IGenreService

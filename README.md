@@ -225,6 +225,49 @@ When the resolved language matches a translation, `GET /api/contents/{id}` and `
 
 ---
 
+## Subscription model
+
+Three monetisation tiers (seeded by migration `AddPlansSubscriptionsPayments`):
+
+| Code | Price | Period | MaxQuality | Streams | Ads | Downloads |
+|------|-------|--------|------------|---------|-----|-----------|
+| `free` | 0 UZS | Monthly | 720p | 1 | yes | no |
+| `premium_monthly` | 49 000 UZS | Monthly | 2160p | 2 | no | yes |
+| `premium_yearly` | 490 000 UZS | Yearly | 2160p | 4 | no | yes |
+
+### Entities
+- `Plan` — tariff catalogue (Code, Price, Period, MaxQuality, MaxConcurrentStreams, HasAds, AllowsDownload, FeaturesJson).
+- `UserSubscription` — Active / Cancelled / Expired / PendingPayment with `StartedAt`, `ExpiresAt`, `AutoRenew`.
+- `Payment` — Pending / Completed / Failed / Refunded; provider Click / Payme / Stripe / Manual. Captures `ProviderTransactionId` and `RawResponseJson`.
+
+### Payment providers
+Provider integrations live behind `IPaymentProviderService` and are resolved by **keyed scoped DI** (`AddKeyedScoped<IPaymentProviderService, ...>("Click")` etc.). The shipped implementations (`ClickPaymentProvider`, `PaymePaymentProvider`, `StripePaymentProvider`, `ManualPaymentProvider`) are stubs — they return a `https://demo-payment/...` URL and `VerifyCallbackAsync` returns `true`. **No real money flows. Real signature validation is a TODO.**
+
+### Subscribe / cancel flow
+1. `POST /api/subscriptions` `{ planId, provider }` — creates a `PendingPayment` `UserSubscription` and `Pending` `Payment` in one save, then asks the provider for a payment URL. Returns `{ paymentId, paymentUrl }`.
+2. The provider hits `POST /api/payments/callback/{provider}` with `{ paymentId, transactionId }`. The matching provider's `VerifyCallbackAsync` runs; on success `PaymentService.MarkCompletedAsync` flips the payment to `Completed` and the subscription to `Active` with `ExpiresAt` recomputed from the plan's `BillingPeriod`.
+3. `POST /api/subscriptions/cancel` — marks the active subscription `Cancelled` and stamps `CancelledAt`. `ExpiresAt` is **not** moved up: the user keeps the days they paid for.
+
+### Premium content gating
+Setting `Content.IsPremium = true` (via admin update) restricts streaming URLs to active subscribers:
+- `GET /api/contents/{id}` / `GET /api/contents/slug/{slug}` — `videoUrl` and `hlsManifestUrl` come back `null` for free users, with `isPremium: true` and `requiresPremium: true` flags in the response.
+- `GET /api/contents/{id}/stream` `[Authorize]` — dedicated endpoint that returns `{ hlsManifestUrl, videoUrl }` for subscribers and `403` otherwise.
+
+### Subscription endpoints
+| Method | Route | Auth | Purpose |
+|--------|-------|------|---------|
+| GET | `/api/plans` | — | Active plans, cached for 1h in Redis (`plans:active`). |
+| GET | `/api/plans/{code}` | — | Single plan by code. |
+| GET / POST / PUT / DELETE | `/api/admin/plans` | Admin | CRUD + deactivate. Invalidates the cache. |
+| GET | `/api/subscriptions/me` | User | The caller's latest subscription with `daysRemaining`. |
+| POST | `/api/subscriptions` | User | Subscribe → returns `InitiatePaymentResult`. |
+| POST | `/api/subscriptions/cancel` | User | Cancel without losing remaining days. |
+| GET | `/api/payments/me` | User | Paged payment history. |
+| GET | `/api/payments/admin` | Admin | Paged payment history across all users. |
+| POST | `/api/payments/callback/{provider}` | — | Provider webhook. Signature check is a stub. |
+
+---
+
 ## Roadmap (keyingi bosqich)
 - [ ] HLS transcoding — FFmpeg worker service
 - [ ] CDN integration — Bunny.net signed URLs

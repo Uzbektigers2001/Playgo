@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Phase 4: Subscriptions (Prompt 8)
+- `Plan`, `UserSubscription`, `Payment` entities. Enums: `BillingPeriod` (Monthly/Quarterly/Yearly/Lifetime), `SubscriptionStatus` (Active/Cancelled/Expired/PendingPayment), `PaymentStatus` (Pending/Completed/Failed/Refunded), `PaymentProvider` (Click/Payme/Stripe/Manual).
+- 3 default plans seeded via migration: `free` (0 UZS, 720p, ads), `premium_monthly` (49 000 UZS, 2160p, no ads, downloads), `premium_yearly` (490 000 UZS, yearly, 4 streams).
+- `Content.IsPremium` flag and premium content gating in `ContentService` — `videoUrl` / `hlsManifestUrl` come back `null` for non-subscribers; `ContentDetailDto` exposes new `isPremium` and `requiresPremium` fields. New `GET /api/contents/{id}/stream` `[Authorize]` endpoint returns streaming URLs only for active subscribers (`403` otherwise).
+- Payment provider abstraction via `IPaymentProviderService`. Stubs: `ClickPaymentProvider`, `PaymePaymentProvider`, `StripePaymentProvider`, `ManualPaymentProvider` — all return placeholder `https://demo-payment/...` URLs and signature verification is a TODO. Resolved by **keyed scoped DI** (`AddKeyedScoped<IPaymentProviderService, ...>(provider.ToString())`), looked up by `SubscriptionService` and `PaymentsController` callback handler.
+- Subscribe / cancel flow: `POST /api/subscriptions` creates a `PendingPayment` subscription **and** `Pending` payment in a single `SaveChangesAsync` (atomic), returns `{ paymentId, paymentUrl }`. `POST /api/payments/callback/{provider}` (no auth) verifies signature stub and runs `PaymentService.MarkCompletedAsync`, which flips the payment to `Completed` and the subscription to `Active` with `ExpiresAt` recomputed from `BillingPeriod`. `POST /api/subscriptions/cancel` sets `Cancelled` + `CancelledAt`; `ExpiresAt` is preserved so the user keeps their paid days.
+- `PlanService` caches active plans in Redis under `plans:active` with a 1-hour TTL; CRUD operations invalidate the cache.
+- New controllers: `PlansController` (public), `AdminPlansController` (Admin CRUD), `SubscriptionsController` ([Authorize]), `PaymentsController` (mix of [Authorize], [Authorize(Roles=Admin)], and webhook).
+- 11 unit tests: `PlanServiceTests` x3 (create, duplicate code rejected, active-only sorted by price), `SubscriptionServiceTests` x5 (subscribe creates pending Payment, callback activates Subscription, cancel preserves ExpiresAt, IsActive checks status+expiry, already-active prevents new subscription), `PaymentServiceTests` x3 (initiate creates Pending, MarkCompleted idempotent, per-user payment scoping).
+- Migrations:
+  - `AddIsPremiumToContent` — adds `IsPremium bool NOT NULL DEFAULT false` to `contents`.
+  - `AddPlansSubscriptionsPayments` — creates `plans`, `user_subscriptions`, `payments` tables with indexes (`IX_plans_Code` unique, `IX_user_subscriptions_UserId_Status`, `IX_payments_UserId`, `IX_payments_ProviderTransactionId`) and seeds the 3 default plans.
+- **No real money flows.** Every provider is a stub. Click/Payme/Stripe signature validation is a `// TODO`.
+
 ### Setup
 - Initial project audit and environment setup
 

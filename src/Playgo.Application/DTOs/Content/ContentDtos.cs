@@ -68,7 +68,9 @@ public record ContentDetailDto(
     bool IsFeatured,
     List<GenreDto> Genres,
     List<SeasonDto> Seasons,
-    List<ContentTranslationDto> Translations);
+    List<ContentTranslationDto> Translations,
+    bool IsPremium = false,
+    bool RequiresPremium = false);
 
 public record CreateContentRequest(
     string Title,
@@ -91,7 +93,8 @@ public record CreateContentRequest(
     string? Cast,
     bool IsFeatured,
     List<Guid> GenreIds,
-    List<UpsertContentTranslationRequest>? Translations = null);
+    List<UpsertContentTranslationRequest>? Translations = null,
+    bool IsPremium = false);
 
 public record UpdateContentRequest(
     string Title,
@@ -116,7 +119,8 @@ public record UpdateContentRequest(
     List<Guid> GenreIds,
     ContentStatus Status,
     bool IsTrending,
-    List<UpsertContentTranslationRequest>? Translations = null);
+    List<UpsertContentTranslationRequest>? Translations = null,
+    bool IsPremium = false);
 
 public record CreateSeasonRequest(
     Guid ContentId,
@@ -141,6 +145,10 @@ public record CreateGenreRequest(
     string Name,
     string? Description,
     string? IconUrl);
+
+public record StreamUrlsDto(
+    string? HlsManifestUrl,
+    string? VideoUrl);
 
 public class ContentFilterRequest
 {

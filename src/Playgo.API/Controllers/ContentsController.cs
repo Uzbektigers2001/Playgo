@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Playgo.API.Extensions;
 using Playgo.Application.DTOs.Content;
 using Playgo.Application.Services;
 
@@ -69,5 +71,15 @@ public class ContentsController : ControllerBase
     {
         var items = await _contentService.GetTranslationsAsync(id, ct);
         return Ok(items);
+    }
+
+    [Authorize]
+    [HttpGet("{id:guid}/stream")]
+    public async Task<IActionResult> GetStream(Guid id, CancellationToken ct)
+    {
+        var result = await _contentService.GetStreamUrlsAsync(id, ct);
+        if (!result.Success)
+            return StatusCode(StatusCodes.Status403Forbidden, new { error = result.Error });
+        return Ok(result.Data);
     }
 }
