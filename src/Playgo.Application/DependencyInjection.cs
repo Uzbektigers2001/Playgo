@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddScoped<IGenreService, GenreService>();
         services.AddScoped<ISeasonEpisodeService, SeasonEpisodeService>();
         services.AddScoped<IReviewService, ReviewService>();
+        services.AddScoped<IAdminReviewService, AdminReviewService>();
         services.AddScoped<IFavoriteService, FavoriteService>();
         services.AddScoped<IWatchHistoryService, WatchHistoryService>();
         services.AddScoped<IWatchlistService, WatchlistService>();

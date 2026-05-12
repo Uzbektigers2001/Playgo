@@ -55,4 +55,13 @@ public class ReviewsController : ControllerBase
         if (!result.Success) return BadRequest(new { error = result.Error });
         return NoContent();
     }
+
+    [Authorize]
+    [HttpPost("{id:guid}/vote")]
+    public async Task<IActionResult> Vote(Guid id, [FromBody] ToggleVoteRequest request, CancellationToken ct)
+    {
+        var result = await _reviewService.ToggleVoteAsync(User.GetUserId(), id, request.VoteType, ct);
+        if (!result.Success) return BadRequest(new { error = result.Error });
+        return Ok(result.Data);
+    }
 }

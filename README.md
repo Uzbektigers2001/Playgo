@@ -127,6 +127,22 @@ User-created collections of content. Owner has full CRUD; public playlists are v
 | DELETE | /{id}/items/{itemId} | ✓ owner | Remove item. |
 | PUT | /{id}/reorder | ✓ owner | Body `{ itemIdsInOrder: [guid, …] }` — must list every current item exactly once; OrderIndex is reassigned by position. |
 
+### Review moderation
+
+Reviews carry `likesCount`, `dislikesCount`, and (for authenticated callers) `myVote: "like" | "dislike" | null`. Voting is a single endpoint with toggle semantics — a same-type vote cancels itself, opposite-type swaps counters atomically.
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | /api/reviews/{id}/vote | ✓ | Body `{ "voteType": 1 \| 2 }` (1=Like, 2=Dislike). Returns `{ likesCount, dislikesCount, myVote }`. |
+| GET | /api/admin/reviews?page=&pageSize=&contentId=&isApproved=&userId=&search= | Admin | Paged list including unapproved entries. |
+| PUT | /api/admin/reviews/{id}/approve | Admin | Set `IsApproved=true`; folds the rating back into the content average if it was previously pending. |
+| PUT | /api/admin/reviews/{id}/reject | Admin | Body `{ "reason": "..." }`. Stores `RejectionReason`; pulls a previously-approved rating out of the average. |
+| DELETE | /api/admin/reviews/{id} | Admin | Soft-delete. |
+
+The public `GET /api/reviews/content/{contentId}` only shows `IsApproved=true` reviews. Anonymous and non-author callers always see `myVote=null`.
+
+`appsettings.json` carries a `Reviews:RequireModeration` flag — when `true`, new reviews from `POST /api/reviews` are created with `IsApproved=false` (and not folded into the content average) until an admin approves them.
+
 ---
 
 ## Environment Variables

@@ -14,6 +14,7 @@ public interface IApplicationDbContext
     DbSet<Favorite> Favorites { get; }
     DbSet<WatchHistory> WatchHistories { get; }
     DbSet<Review> Reviews { get; }
+    DbSet<ReviewVote> ReviewVotes { get; }
     DbSet<UserPreferences> UserPreferences { get; }
     DbSet<ContentTranslation> ContentTranslations { get; }
     DbSet<GenreTranslation> GenreTranslations { get; }
