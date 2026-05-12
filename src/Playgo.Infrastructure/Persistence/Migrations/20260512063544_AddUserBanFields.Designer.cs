@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Playgo.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using Playgo.Infrastructure.Persistence;
 namespace Playgo.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260512063544_AddUserBanFields")]
+    partial class AddUserBanFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -215,49 +218,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("content_translations", (string)null);
-                });
-
-            modelBuilder.Entity("Playgo.Domain.Entities.ContentViewLog", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ContentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("IpAddress")
-                        .HasMaxLength(45)
-                        .HasColumnType("character varying(45)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserAgent")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("ViewedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ContentId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("ViewedAt");
-
-                    b.ToTable("content_view_logs", (string)null);
                 });
 
             modelBuilder.Entity("Playgo.Domain.Entities.Episode", b =>
@@ -873,24 +833,6 @@ namespace Playgo.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Content");
-                });
-
-            modelBuilder.Entity("Playgo.Domain.Entities.ContentViewLog", b =>
-                {
-                    b.HasOne("Playgo.Domain.Entities.Content", "Content")
-                        .WithMany()
-                        .HasForeignKey("ContentId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("Playgo.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("Content");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Playgo.Domain.Entities.Episode", b =>

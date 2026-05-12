@@ -12,11 +12,13 @@ public class ContentService : IContentService
 {
     private readonly IApplicationDbContext _db;
     private readonly ILocalizationContext _localization;
+    private readonly ICurrentUserService? _currentUser;
 
-    public ContentService(IApplicationDbContext db, ILocalizationContext localization)
+    public ContentService(IApplicationDbContext db, ILocalizationContext localization, ICurrentUserService? currentUser = null)
     {
         _db = db;
         _localization = localization;
+        _currentUser = currentUser;
     }
 
     public async Task<PagedResult<ContentListItemDto>> GetContentsAsync(ContentFilterRequest filter, CancellationToken cancellationToken = default)
@@ -298,6 +300,23 @@ public class ContentService : IContentService
         var content = await _db.Contents.FirstOrDefaultAsync(c => c.Id == contentId && !c.IsDeleted, cancellationToken);
         if (content is null) return;
         content.ViewCount++;
+
+        var ip = _currentUser?.IpAddress;
+        var ua = _currentUser?.UserAgent;
+        if (ua is { Length: > 500 })
+            ua = ua.Substring(0, 500);
+        if (ip is { Length: > 45 })
+            ip = ip.Substring(0, 45);
+
+        _db.ContentViewLogs.Add(new ContentViewLog
+        {
+            ContentId = contentId,
+            UserId = _currentUser?.UserId,
+            ViewedAt = DateTime.UtcNow,
+            IpAddress = ip,
+            UserAgent = ua,
+        });
+
         await _db.SaveChangesAsync(cancellationToken);
     }
 

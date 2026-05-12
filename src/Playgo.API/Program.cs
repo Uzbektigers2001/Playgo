@@ -54,7 +54,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(opts =>
+{
+    opts.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
+    opts.AddPolicy("AdminOrModerator", p => p.RequireRole("Admin", "Moderator"));
+});
 
 // Swagger
 builder.Services.AddSwaggerWithJwt();

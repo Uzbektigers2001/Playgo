@@ -21,6 +21,7 @@ public interface IApplicationDbContext
     DbSet<Watchlist> Watchlists { get; }
     DbSet<Playlist> Playlists { get; }
     DbSet<PlaylistItem> PlaylistItems { get; }
+    DbSet<ContentViewLog> ContentViewLogs { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

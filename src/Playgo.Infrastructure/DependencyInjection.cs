@@ -7,6 +7,7 @@ using Playgo.Application.Common.Interfaces;
 using Playgo.Infrastructure.Identity;
 using Playgo.Infrastructure.Persistence;
 using Playgo.Infrastructure.Services;
+using StackExchange.Redis;
 
 namespace Playgo.Infrastructure;
 
@@ -23,12 +24,16 @@ public static class DependencyInjection
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
+        var redisConnection = configuration.GetConnectionString("Redis") ?? "localhost:6379";
+
         services.AddStackExchangeRedisCache(options =>
         {
-            options.Configuration = configuration.GetConnectionString("Redis")
-                ?? "localhost:6379";
+            options.Configuration = redisConnection;
             options.InstanceName = configuration["Redis:InstanceName"] ?? "playgo:";
         });
+
+        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnection));
+        services.AddScoped<ICacheService, RedisCacheService>();
 
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IPasswordHasher, BcryptPasswordHasher>();
