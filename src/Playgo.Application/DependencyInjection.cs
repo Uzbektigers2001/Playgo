@@ -21,6 +21,9 @@ public static class DependencyInjection
         services.AddScoped<IMoviesAliasService, MoviesAliasService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+        services.AddScoped<IPlanService, PlanService>();
+        services.AddScoped<ISubscriptionService, SubscriptionService>();
+        services.AddScoped<IPaymentService, PaymentService>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 

@@ -37,6 +37,7 @@ public class Content : BaseEntity
 
     public bool IsFeatured { get; set; } = false;
     public bool IsTrending { get; set; } = false;
+    public bool IsPremium { get; set; } = false;
 
     public VideoQuality Quality { get; set; } = VideoQuality.HD;
 

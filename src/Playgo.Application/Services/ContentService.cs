@@ -13,12 +13,18 @@ public class ContentService : IContentService
     private readonly IApplicationDbContext _db;
     private readonly ILocalizationContext _localization;
     private readonly ICurrentUserService? _currentUser;
+    private readonly ISubscriptionService? _subscriptionService;
 
-    public ContentService(IApplicationDbContext db, ILocalizationContext localization, ICurrentUserService? currentUser = null)
+    public ContentService(
+        IApplicationDbContext db,
+        ILocalizationContext localization,
+        ICurrentUserService? currentUser = null,
+        ISubscriptionService? subscriptionService = null)
     {
         _db = db;
         _localization = localization;
         _currentUser = currentUser;
+        _subscriptionService = subscriptionService;
     }
 
     public async Task<PagedResult<ContentListItemDto>> GetContentsAsync(ContentFilterRequest filter, CancellationToken cancellationToken = default)
@@ -86,7 +92,8 @@ public class ContentService : IContentService
         if (content is null)
             return Result<ContentDetailDto>.Fail("Content not found.");
 
-        return Result<ContentDetailDto>.Ok(MapToDetail(content, _localization.CurrentLanguage));
+        var requiresPremium = await ShouldRequirePremiumAsync(content, cancellationToken);
+        return Result<ContentDetailDto>.Ok(MapToDetail(content, _localization.CurrentLanguage, requiresPremium));
     }
 
     public async Task<Result<ContentDetailDto>> GetContentBySlugAsync(string slug, CancellationToken cancellationToken = default)
@@ -95,7 +102,18 @@ public class ContentService : IContentService
         if (content is null)
             return Result<ContentDetailDto>.Fail("Content not found.");
 
-        return Result<ContentDetailDto>.Ok(MapToDetail(content, _localization.CurrentLanguage));
+        var requiresPremium = await ShouldRequirePremiumAsync(content, cancellationToken);
+        return Result<ContentDetailDto>.Ok(MapToDetail(content, _localization.CurrentLanguage, requiresPremium));
+    }
+
+    private async Task<bool> ShouldRequirePremiumAsync(Content content, CancellationToken ct)
+    {
+        if (!content.IsPremium) return false;
+        var userId = _currentUser?.UserId;
+        if (userId is null) return true;
+        if (_subscriptionService is null) return true;
+        var active = await _subscriptionService.IsActiveAsync(userId.Value, ct);
+        return !active;
     }
 
     public async Task<List<ContentListItemDto>> GetFeaturedAsync(int limit, CancellationToken cancellationToken = default)
@@ -186,6 +204,7 @@ public class ContentService : IContentService
             Director = request.Director,
             Cast = request.Cast,
             IsFeatured = request.IsFeatured,
+            IsPremium = request.IsPremium,
         };
 
         foreach (var gid in request.GenreIds.Distinct())
@@ -246,6 +265,7 @@ public class ContentService : IContentService
         content.Cast = request.Cast;
         content.IsFeatured = request.IsFeatured;
         content.IsTrending = request.IsTrending;
+        content.IsPremium = request.IsPremium;
         content.UpdatedAt = DateTime.UtcNow;
 
         content.ContentGenres.Clear();
@@ -475,8 +495,10 @@ public class ContentService : IContentService
             c.ContentGenres.Select(cg => cg.Genre.Name).ToList());
     }
 
-    private static ContentDetailDto MapToDetail(Content c, string lang)
+    private static ContentDetailDto MapToDetail(Content c, string lang, bool requiresPremium = false)
     {
+        var videoUrl = requiresPremium ? null : c.VideoUrl;
+        var hlsUrl = requiresPremium ? null : c.HlsManifestUrl;
         var tr = PickTranslation(c, lang);
         return new ContentDetailDto(
             c.Id,
@@ -495,8 +517,8 @@ public class ContentService : IContentService
             c.PosterUrl,
             c.BackdropUrl,
             c.TrailerUrl,
-            c.VideoUrl,
-            c.HlsManifestUrl,
+            videoUrl,
+            hlsUrl,
             tr?.Director ?? c.Director,
             tr?.Cast ?? c.Cast,
             c.AverageRating,
@@ -533,6 +555,23 @@ public class ContentService : IContentService
                 .Where(t => !t.IsDeleted)
                 .OrderBy(t => t.LanguageCode)
                 .Select(MapTranslation)
-                .ToList());
+                .ToList(),
+            c.IsPremium,
+            requiresPremium);
+    }
+
+    public async Task<Result<StreamUrlsDto>> GetStreamUrlsAsync(Guid contentId, CancellationToken cancellationToken = default)
+    {
+        var content = await _db.Contents
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == contentId && !c.IsDeleted, cancellationToken);
+        if (content is null)
+            return Result<StreamUrlsDto>.Fail("Content not found.");
+
+        var requiresPremium = await ShouldRequirePremiumAsync(content, cancellationToken);
+        if (requiresPremium)
+            return Result<StreamUrlsDto>.Fail("Premium subscription required.");
+
+        return Result<StreamUrlsDto>.Ok(new StreamUrlsDto(content.HlsManifestUrl, content.VideoUrl));
     }
 }

@@ -22,6 +22,9 @@ public interface IApplicationDbContext
     DbSet<Playlist> Playlists { get; }
     DbSet<PlaylistItem> PlaylistItems { get; }
     DbSet<ContentViewLog> ContentViewLogs { get; }
+    DbSet<Plan> Plans { get; }
+    DbSet<UserSubscription> UserSubscriptions { get; }
+    DbSet<Payment> Payments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

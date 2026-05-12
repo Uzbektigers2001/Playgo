@@ -29,6 +29,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Playlist> Playlists => Set<Playlist>();
     public DbSet<PlaylistItem> PlaylistItems => Set<PlaylistItem>();
     public DbSet<ContentViewLog> ContentViewLogs => Set<ContentViewLog>();
+    public DbSet<Plan> Plans => Set<Plan>();
+    public DbSet<UserSubscription> UserSubscriptions => Set<UserSubscription>();
+    public DbSet<Payment> Payments => Set<Payment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

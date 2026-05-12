@@ -6,7 +6,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Playgo.Application.Common.Interfaces;
 using Playgo.Infrastructure.Identity;
 using Playgo.Infrastructure.Persistence;
+using Playgo.Application.Services;
 using Playgo.Infrastructure.Services;
+using Playgo.Infrastructure.Services.Payments;
 using StackExchange.Redis;
 
 namespace Playgo.Infrastructure;
@@ -43,6 +45,11 @@ public static class DependencyInjection
         services.AddScoped<ILocalizationContext, LocalizationContext>();
 
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
+
+        services.AddKeyedScoped<IPaymentProviderService, ClickPaymentProvider>("Click");
+        services.AddKeyedScoped<IPaymentProviderService, PaymePaymentProvider>("Payme");
+        services.AddKeyedScoped<IPaymentProviderService, StripePaymentProvider>("Stripe");
+        services.AddKeyedScoped<IPaymentProviderService, ManualPaymentProvider>("Manual");
 
         services.AddScoped<HangfireJobs>();
 
