@@ -8,8 +8,11 @@ using Playgo.Domain.Entities;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Payment history + provider webhook callback (`/api/payments/callback/{provider}`).</summary>
 [ApiController]
 [Route("api/payments")]
+[Tags("Payments")]
+[Produces("application/json")]
 public class PaymentsController : ControllerBase
 {
     private readonly IPaymentService _paymentService;

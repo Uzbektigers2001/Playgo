@@ -4,9 +4,11 @@ using Playgo.Application.Common.Interfaces;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Admin-only image and video uploads. Images ≤ 10 MB, videos ≤ 2 GB.</summary>
 [ApiController]
 [Route("api/upload")]
 [Authorize(Roles = "Admin")]
+[Tags("Upload")]
 public class UploadController : ControllerBase
 {
     private const long MaxImageBytes = 10L * 1024 * 1024;

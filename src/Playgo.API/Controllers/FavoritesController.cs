@@ -5,9 +5,12 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Per-user favorites: list / add / remove / check.</summary>
 [ApiController]
 [Authorize]
 [Route("api/favorites")]
+[Tags("Favorites")]
+[Produces("application/json")]
 public class FavoritesController : ControllerBase
 {
     private readonly IFavoriteService _favoriteService;

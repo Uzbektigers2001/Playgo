@@ -268,11 +268,98 @@ Setting `Content.IsPremium = true` (via admin update) restricts streaming URLs t
 
 ---
 
+## Database seed
+
+`DbSeeder` (in `src/Playgo.Infrastructure/Persistence/Seeders/DbSeeder.cs`) runs idempotently on every startup, after migrations:
+
+| Step | Runs in | What it does |
+|------|---------|--------------|
+| `SeedAdminAsync` | every env | Creates an admin user if no admin exists. Email = `Seed:AdminEmail` (default `admin@playgo.uz`). Password = `SEED_ADMIN_PASSWORD` env var → `Seed:AdminPassword` → `"Admin123!"`. |
+| `SeedGenresAsync` | every env | Inserts 12 genres if missing: Action, Drama, Comedy, Sci-Fi, Horror, Thriller, Romance, Animation, Documentary, Adventure, Crime, Fantasy. |
+| `SeedPlansAsync` | every env | Inserts 3 default plans (`free`, `premium_monthly`, `premium_yearly`) when the `plans` table is empty. |
+| `SeedDemoContentAsync` | **Dev / Staging only** | Inserts 10 demo Movies/Series with placeholder posters, lorem ipsum descriptions and 1–3 random genres. Skipped in Production. |
+
+> **Security**: in production, set `SEED_ADMIN_PASSWORD` to a strong value before first boot. The default `Admin123!` is for local dev only.
+
+---
+
+## Smoke test
+
+After `docker-compose up -d`, open `docs/smoke-test.http` in VS Code with the [REST Client extension](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) and run the requests in order:
+
+1. `POST /auth/register` (201)
+2. `POST /auth/login` (200 — copy `accessToken`)
+3. `GET /auth/me` (200)
+4. `GET /contents/featured` (200, populated in Dev)
+5. `GET /contents` paged (200)
+6. `GET /movies` legacy alias (200)
+7. `POST /favorites/{id}` (204)
+8. `GET /favorites` (200)
+9. `POST /watchlist/{id}` (204)
+10. `POST /reviews` `{ contentId, rating, comment }` (201 — copy `reviewId`)
+11. `POST /reviews/{id}/vote` `{ voteType: 1 }` (200)
+12. `GET /plans` (200 — copy `planId`)
+13. `POST /subscriptions` `{ planId, provider: "Manual" }` (200 — copy `paymentId`)
+14. `POST /payments/callback/Manual` `{ paymentId }` (200)
+15. `GET /subscriptions/me` (200, status active)
+
+Health probes: `GET /health/live` and `GET /health/ready` should return `200`.
+
+---
+
+## Postman / Bruno collection
+
+`docs/api/Playgo.postman_collection.json` ships with 18 folders mirroring the Swagger tags. Import alongside `docs/api/local.postman_environment.json`. The `Login` request has a test script that auto-saves `accessToken` and `refreshToken` into the environment, so subsequent Bearer-auth requests just work.
+
+```bash
+# Newman (Postman CLI)
+newman run docs/api/Playgo.postman_collection.json -e docs/api/local.postman_environment.json
+```
+
+---
+
+## Running tests
+
+```bash
+dotnet test
+# with coverage
+dotnet test --collect:"XPlat Code Coverage" --results-directory ./coverage
+```
+
+The test suite covers:
+
+- **Service unit tests** (xUnit + Moq + EF Core InMemory): `AuthService`, `ContentService`, `GenreService`, `FavoriteService`, `WatchHistoryService`, `ReviewService`, `WatchlistService`, `PlaylistService`, `SubscriptionService`, `PaymentService`, `PlanService`, `AdminUserService`, `AdminDashboardService`, `AdminReviewService`, plus per-feature flows (preferences, content translations, review votes).
+- **Integration tests** (`WebApplicationFactory<Program>`): `AuthEndpointsTests`, `ContentsEndpointsTests`, `AdminEndpointsTests` (401 / 403 / 200 RBAC paths).
+- **Test data**: `tests/Playgo.Tests/Common/TestDataBuilder.cs` (Bogus-backed factories) and `TestWebAppFactory.cs` (boots the real ASP.NET pipeline against InMemory EF Core, no Postgres / Redis / Hangfire required).
+
+---
+
+## Continuous integration
+
+`.github/workflows/ci.yml` boots PostgreSQL 16 + Redis 7 services and runs `restore → build (Release) → test --collect:"XPlat Code Coverage" --logger trx`. Test report is published with `dorny/test-reporter`; cobertura coverage is uploaded as the `code-coverage` artifact (14 days). A Docker image build smoke check follows.
+
+`.github/workflows/docker.yml` pushes a multi-tag image to GHCR (`ghcr.io/<repo>/playgo-api`) on `main` (`latest` + short sha) and on `v*` tags (semver).
+
+---
+
+## Frontend integration notes
+
+The Next.js frontend lives in a separate repo and consumes this API. Key contracts:
+
+- **Auth**: store `accessToken` and `refreshToken` in HttpOnly cookies or IndexedDB. Send `Authorization: Bearer <accessToken>` on every authenticated call. Call `POST /api/auth/refresh` when an access token returns 401.
+- **i18n**: pass either `?lang=uz|ru|en` query string OR set `Accept-Language: uz` to localize content/genre responses. The full `translations` array is always returned so the client can switch on the fly.
+- **Premium gating**: when `contentDetailDto.requiresPremium === true`, the `videoUrl` and `hlsManifestUrl` will be `null` — show a "Subscribe" CTA. Use `GET /api/contents/{id}/stream` from the player after the user subscribes.
+- **Paged endpoints**: standard envelope `{ items, totalCount, page, pageSize }`. Movie endpoints (`/api/movies`) use the legacy `{ data, total, page, totalPages }` shape.
+- **Admin panel**: requires a JWT with `role=Admin`. Seeded admin login is `admin@playgo.uz` / `Admin123!` in dev; rotate via `SEED_ADMIN_PASSWORD` in prod.
+- **Webhooks**: payment provider callbacks must `POST` to `/api/payments/callback/{provider}` — never expose this to public CORS.
+
+---
+
 ## Roadmap (keyingi bosqich)
+
 - [ ] HLS transcoding — FFmpeg worker service
 - [ ] CDN integration — Bunny.net signed URLs
 - [ ] Full-text search — PostgreSQL tsvector
 - [ ] Keyset pagination — OFFSET o'rniga cursor-based
-- [ ] Redis caching — Featured/Trending/Genre endpointlar uchun
-- [ ] Email verification — SMTP + confirmation link
-- [ ] Admin analytics dashboard endpoint
+- [ ] Real money provider integration (Click/Payme/Stripe signature verification)
+- [ ] Email verification + password reset (in-progress on `feature/09-cache-ratelimit-email`)

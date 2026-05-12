@@ -4,9 +4,12 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Admin dashboard analytics. `/stats` is cached in Redis for 60 seconds.</summary>
 [ApiController]
 [Route("api/admin/dashboard")]
 [Authorize(Roles = "Admin")]
+[Tags("Admin - Dashboard")]
+[Produces("application/json")]
 public class AdminDashboardController : ControllerBase
 {
     private readonly IAdminDashboardService _service;

@@ -5,9 +5,12 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Admin review moderation — list, approve, reject, delete.</summary>
 [ApiController]
 [Route("api/admin/reviews")]
 [Authorize(Roles = "Admin")]
+[Tags("Admin - Reviews")]
+[Produces("application/json")]
 public class AdminReviewsController : ControllerBase
 {
     private readonly IAdminReviewService _adminReviews;

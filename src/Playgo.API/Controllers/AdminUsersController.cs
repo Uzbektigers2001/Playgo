@@ -6,9 +6,12 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Admin user management — list, detail, update, ban, unban, delete.</summary>
 [ApiController]
 [Route("api/admin/users")]
 [Authorize(Roles = "Admin")]
+[Tags("Admin - Users")]
+[Produces("application/json")]
 public class AdminUsersController : ControllerBase
 {
     private readonly IAdminUserService _service;

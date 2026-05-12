@@ -6,8 +6,11 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Public catalog: list, detail (id/slug), featured, trending, similar, view-tracking, streaming.</summary>
 [ApiController]
 [Route("api/contents")]
+[Tags("Contents")]
+[Produces("application/json")]
 public class ContentsController : ControllerBase
 {
     private readonly IContentService _contentService;
