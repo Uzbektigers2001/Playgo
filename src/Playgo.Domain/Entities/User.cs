@@ -22,6 +22,8 @@ public class User : BaseEntity
     public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
     public ICollection<WatchHistory> WatchHistories { get; set; } = new List<WatchHistory>();
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public ICollection<Watchlist> Watchlist { get; set; } = new List<Watchlist>();
+    public ICollection<Playlist> Playlists { get; set; } = new List<Playlist>();
 
     public UserPreferences? Preferences { get; set; }
 }

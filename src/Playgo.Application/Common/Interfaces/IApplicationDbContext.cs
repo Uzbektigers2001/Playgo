@@ -17,6 +17,9 @@ public interface IApplicationDbContext
     DbSet<UserPreferences> UserPreferences { get; }
     DbSet<ContentTranslation> ContentTranslations { get; }
     DbSet<GenreTranslation> GenreTranslations { get; }
+    DbSet<Watchlist> Watchlists { get; }
+    DbSet<Playlist> Playlists { get; }
+    DbSet<PlaylistItem> PlaylistItems { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

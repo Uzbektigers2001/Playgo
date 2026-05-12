@@ -24,6 +24,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
     public DbSet<ContentTranslation> ContentTranslations => Set<ContentTranslation>();
     public DbSet<GenreTranslation> GenreTranslations => Set<GenreTranslation>();
+    public DbSet<Watchlist> Watchlists => Set<Watchlist>();
+    public DbSet<Playlist> Playlists => Set<Playlist>();
+    public DbSet<PlaylistItem> PlaylistItems => Set<PlaylistItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

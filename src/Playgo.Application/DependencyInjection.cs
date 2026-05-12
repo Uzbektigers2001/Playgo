@@ -15,6 +15,8 @@ public static class DependencyInjection
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IFavoriteService, FavoriteService>();
         services.AddScoped<IWatchHistoryService, WatchHistoryService>();
+        services.AddScoped<IWatchlistService, WatchlistService>();
+        services.AddScoped<IPlaylistService, PlaylistService>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
