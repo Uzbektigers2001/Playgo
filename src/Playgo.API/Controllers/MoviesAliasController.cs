@@ -3,8 +3,11 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Legacy `/api/movies` shape used by the old frontend. Wraps `ContentService` with movie-only DTOs.</summary>
 [ApiController]
 [Route("api/movies")]
+[Tags("Movies (Legacy)")]
+[Produces("application/json")]
 public class MoviesAliasController : ControllerBase
 {
     private readonly IMoviesAliasService _movies;

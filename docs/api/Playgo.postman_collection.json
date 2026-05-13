@@ -1,0 +1,337 @@
+{
+  "info": {
+    "_postman_id": "11111111-1111-1111-1111-111111111111",
+    "name": "Playgo API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Playgo backend REST collection. Login first — `accessToken` and `refreshToken` are auto-saved into the environment by the test script."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"username\": \"newuser\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.environment.set('accessToken', json.accessToken);",
+                  "  pm.environment.set('refreshToken', json.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emailOrUsername\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.environment.set('accessToken', json.accessToken);",
+                  "  pm.environment.set('refreshToken', json.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accessToken\": \"{{accessToken}}\",\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Me",
+          "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/me",
+            "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"New Name\"\n}" }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/me/password",
+            "body": { "mode": "raw", "raw": "{\n  \"currentPassword\": \"Password123!\",\n  \"newPassword\": \"NewPassword123!\"\n}" }
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/verify-email",
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"<paste-token>\"\n}" }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\"\n}" }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/reset-password",
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"<paste-token>\",\n  \"newPassword\": \"NewPassword123!\"\n}" }
+          }
+        },
+        { "name": "Logout", "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" } },
+        { "name": "Logout All", "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout-all" } }
+      ]
+    },
+    {
+      "name": "Contents",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/contents?page=1&pageSize=20" } },
+        { "name": "Featured", "request": { "method": "GET", "url": "{{baseUrl}}/contents/featured?limit=10" } },
+        { "name": "Trending", "request": { "method": "GET", "url": "{{baseUrl}}/contents/trending?limit=10" } },
+        { "name": "Get By Id", "request": { "method": "GET", "url": "{{baseUrl}}/contents/{{contentId}}" } },
+        { "name": "Get By Slug", "request": { "method": "GET", "url": "{{baseUrl}}/contents/slug/{{contentSlug}}" } },
+        { "name": "Similar", "request": { "method": "GET", "url": "{{baseUrl}}/contents/{{contentId}}/similar?limit=5" } },
+        { "name": "Increment View", "request": { "method": "POST", "url": "{{baseUrl}}/contents/{{contentId}}/view" } },
+        { "name": "Stream URLs", "request": { "method": "GET", "url": "{{baseUrl}}/contents/{{contentId}}/stream" } }
+      ]
+    },
+    {
+      "name": "Movies (Legacy)",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/movies?page=1&limit=20" } },
+        { "name": "Featured", "request": { "method": "GET", "url": "{{baseUrl}}/movies/featured?limit=10" } },
+        { "name": "Trending", "request": { "method": "GET", "url": "{{baseUrl}}/movies/trending?limit=10" } },
+        { "name": "Get By Id", "request": { "method": "GET", "url": "{{baseUrl}}/movies/{{contentId}}" } },
+        { "name": "Related", "request": { "method": "GET", "url": "{{baseUrl}}/movies/{{contentId}}/related?limit=5" } }
+      ]
+    },
+    {
+      "name": "Genres",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/genres" } },
+        { "name": "Translations", "request": { "method": "GET", "url": "{{baseUrl}}/genres/{{genreId}}/translations" } }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        { "name": "For Content", "request": { "method": "GET", "url": "{{baseUrl}}/reviews/content/{{contentId}}?page=1&pageSize=20" } },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/reviews",
+            "body": { "mode": "raw", "raw": "{\n  \"contentId\": \"{{contentId}}\",\n  \"rating\": 5,\n  \"comment\": \"Loved it.\"\n}" }
+          }
+        },
+        {
+          "name": "Vote (Like)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/reviews/{{reviewId}}/vote",
+            "body": { "mode": "raw", "raw": "{\n  \"voteType\": 1\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Favorites",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/favorites" } },
+        { "name": "Add", "request": { "method": "POST", "url": "{{baseUrl}}/favorites/{{contentId}}" } },
+        { "name": "Remove", "request": { "method": "DELETE", "url": "{{baseUrl}}/favorites/{{contentId}}" } },
+        { "name": "Check", "request": { "method": "GET", "url": "{{baseUrl}}/favorites/{{contentId}}/check" } }
+      ]
+    },
+    {
+      "name": "Watchlist",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/watchlist" } },
+        { "name": "Add", "request": { "method": "POST", "url": "{{baseUrl}}/watchlist/{{contentId}}" } },
+        { "name": "Remove", "request": { "method": "DELETE", "url": "{{baseUrl}}/watchlist/{{contentId}}" } },
+        { "name": "Check", "request": { "method": "GET", "url": "{{baseUrl}}/watchlist/{{contentId}}/check" } }
+      ]
+    },
+    {
+      "name": "Playlists",
+      "item": [
+        { "name": "Mine", "request": { "method": "GET", "url": "{{baseUrl}}/playlists/mine" } },
+        { "name": "Public", "request": { "method": "GET", "url": "{{baseUrl}}/playlists/public" } },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/playlists",
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"My Playlist\",\n  \"isPublic\": false\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Watch History",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/watch-history" } },
+        { "name": "Continue Watching", "request": { "method": "GET", "url": "{{baseUrl}}/watch-history/continue-watching?limit=10" } },
+        {
+          "name": "Update Progress",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/watch-history/progress",
+            "body": { "mode": "raw", "raw": "{\n  \"contentId\": \"{{contentId}}\",\n  \"positionSeconds\": 120,\n  \"durationSeconds\": 5400\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upload",
+      "item": [
+        { "name": "Image", "request": { "method": "POST", "url": "{{baseUrl}}/upload/image", "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] } } },
+        { "name": "Video", "request": { "method": "POST", "url": "{{baseUrl}}/upload/video", "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] } } }
+      ]
+    },
+    {
+      "name": "Plans",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/plans" } },
+        { "name": "By Code", "request": { "method": "GET", "url": "{{baseUrl}}/plans/{{planCode}}" } }
+      ]
+    },
+    {
+      "name": "Subscriptions",
+      "item": [
+        { "name": "Mine", "request": { "method": "GET", "url": "{{baseUrl}}/subscriptions/me" } },
+        {
+          "name": "Subscribe",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/subscriptions",
+            "body": { "mode": "raw", "raw": "{\n  \"planId\": \"{{planId}}\",\n  \"provider\": \"Manual\"\n}" }
+          }
+        },
+        { "name": "Cancel", "request": { "method": "POST", "url": "{{baseUrl}}/subscriptions/cancel" } }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        { "name": "Mine", "request": { "method": "GET", "url": "{{baseUrl}}/payments/me" } },
+        {
+          "name": "Callback (Manual)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/payments/callback/Manual",
+            "body": { "mode": "raw", "raw": "{\n  \"paymentId\": \"{{paymentId}}\",\n  \"transactionId\": \"manual-tx-1\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Users",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/admin/users?page=1&pageSize=20" } },
+        { "name": "Detail", "request": { "method": "GET", "url": "{{baseUrl}}/admin/users/{{userId}}" } },
+        {
+          "name": "Ban",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/users/{{userId}}/ban",
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Violations\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Contents",
+      "item": [
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/contents",
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"New Movie\",\n  \"description\": \"Desc\",\n  \"type\": 1,\n  \"genreIds\": [\"{{genreId}}\"],\n  \"isFeatured\": false\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Reviews",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/admin/reviews?page=1&pageSize=20" } },
+        { "name": "Approve", "request": { "method": "PUT", "url": "{{baseUrl}}/admin/reviews/{{reviewId}}/approve" } }
+      ]
+    },
+    {
+      "name": "Admin - Plans",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/admin/plans" } }
+      ]
+    },
+    {
+      "name": "Admin - Dashboard",
+      "item": [
+        { "name": "Stats", "request": { "method": "GET", "url": "{{baseUrl}}/admin/dashboard/stats" } }
+      ]
+    }
+  ]
+}

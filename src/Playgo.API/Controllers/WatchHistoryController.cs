@@ -6,9 +6,12 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Tracks per-user playback position; powers Continue Watching.</summary>
 [ApiController]
 [Authorize]
 [Route("api/watch-history")]
+[Tags("Watch History")]
+[Produces("application/json")]
 public class WatchHistoryController : ControllerBase
 {
     private readonly IWatchHistoryService _watchHistoryService;

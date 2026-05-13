@@ -1,0 +1,109 @@
+### Playgo smoke test — VS Code REST Client format
+### Run sequentially. After each request, copy values into the variables below.
+
+@baseUrl = http://localhost:8080/api
+@email = smoke_{{$timestamp}}@example.com
+@username = smoke_{{$timestamp}}
+@password = Password123!
+@accessToken = paste-after-login
+@refreshToken = paste-after-login
+@contentId = paste-from-list
+@reviewId = paste-after-review-create
+@planId = paste-after-plans-list
+@paymentId = paste-after-subscribe
+
+### 1. Register a new user (expect 201)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### 2. Login (expect 200 + tokens)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "emailOrUsername": "{{email}}",
+  "password": "{{password}}"
+}
+
+### 3. Get current user (expect 200)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{accessToken}}
+
+### 4. Featured contents (expect 200, populated in dev/staging)
+GET {{baseUrl}}/contents/featured?limit=10
+
+### 5. Paged list (expect 200)
+GET {{baseUrl}}/contents?page=1&pageSize=10
+
+### 6. Movies legacy alias (expect 200)
+GET {{baseUrl}}/movies?page=1&limit=10
+
+### 7. Add to favorites (expect 204)
+POST {{baseUrl}}/favorites/{{contentId}}
+Authorization: Bearer {{accessToken}}
+
+### 8. List favorites (expect 200)
+GET {{baseUrl}}/favorites
+Authorization: Bearer {{accessToken}}
+
+### 9. Add to watchlist (expect 204)
+POST {{baseUrl}}/watchlist/{{contentId}}
+Authorization: Bearer {{accessToken}}
+
+### 10. Create review (expect 201)
+POST {{baseUrl}}/reviews
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "contentId": "{{contentId}}",
+  "rating": 5,
+  "comment": "Smoke-test review"
+}
+
+### 11. Vote on review (expect 200)
+POST {{baseUrl}}/reviews/{{reviewId}}/vote
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "voteType": 1
+}
+
+### 12. Get plans (expect 200, 3 default plans)
+GET {{baseUrl}}/plans
+
+### 13. Subscribe via Manual provider (expect 200, returns paymentId)
+POST {{baseUrl}}/subscriptions
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "planId": "{{planId}}",
+  "provider": "Manual"
+}
+
+### 14. Manual provider callback — completes the payment (expect 200)
+POST {{baseUrl}}/payments/callback/Manual
+Content-Type: application/json
+
+{
+  "paymentId": "{{paymentId}}",
+  "transactionId": "smoke-test-tx-1"
+}
+
+### 15. My subscription (expect 200, status active)
+GET {{baseUrl}}/subscriptions/me
+Authorization: Bearer {{accessToken}}
+
+### Health probes (expect 200 / 200)
+GET {{baseUrl}}/../health/live
+
+###
+GET {{baseUrl}}/../health/ready

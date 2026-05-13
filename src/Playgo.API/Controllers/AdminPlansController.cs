@@ -5,9 +5,12 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Admin CRUD over subscription plans. Cache invalidated on each write.</summary>
 [ApiController]
 [Route("api/admin/plans")]
 [Authorize(Roles = "Admin")]
+[Tags("Admin - Plans")]
+[Produces("application/json")]
 public class AdminPlansController : ControllerBase
 {
     private readonly IPlanService _planService;

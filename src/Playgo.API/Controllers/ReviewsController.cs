@@ -6,8 +6,11 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Public review listing per content + create / update / delete / vote (toggle semantics).</summary>
 [ApiController]
 [Route("api/reviews")]
+[Tags("Reviews")]
+[Produces("application/json")]
 public class ReviewsController : ControllerBase
 {
     private readonly IReviewService _reviewService;

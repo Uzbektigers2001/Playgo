@@ -16,6 +16,7 @@ using Playgo.Application;
 using Playgo.Infrastructure;
 using Playgo.Infrastructure.Identity;
 using Playgo.Infrastructure.Persistence;
+using Playgo.Infrastructure.Persistence.Seeders;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -134,10 +135,14 @@ builder.Services.AddRateLimiter(options =>
         }));
 });
 
-// Health checks
-builder.Services.AddHealthChecks()
-    .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection")!, tags: new[] { "ready" })
-    .AddRedis(builder.Configuration.GetConnectionString("Redis")!, tags: new[] { "ready" });
+// Health checks (skip Postgres/Redis probes in Testing env so integration tests don't need them)
+var healthChecks = builder.Services.AddHealthChecks();
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    healthChecks
+        .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection")!, tags: new[] { "ready" })
+        .AddRedis(builder.Configuration.GetConnectionString("Redis")!, tags: new[] { "ready" });
+}
 
 var app = builder.Build();
 
@@ -159,10 +164,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
-app.UseHangfireDashboard("/hangfire", new DashboardOptions
+if (!app.Environment.IsEnvironment("Testing"))
 {
-    Authorization = [new HangfireAdminAuthFilter()],
-});
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        Authorization = [new HangfireAdminAuthFilter()],
+    });
+}
 
 app.MapControllers().RequireRateLimiting("Default");
 
@@ -184,8 +192,24 @@ if (app.Environment.IsDevelopment())
     await db.Database.MigrateAsync();
 }
 
-// Setup Hangfire recurring jobs
-HangfireJobsSetup.SetupRecurringJobs(app.Services);
+// Database seeding (Admin/Genres/Plans every env, demo content only in Dev/Staging)
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
+    try
+    {
+        await seeder.SeedAsync();
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Seed");
+        logger.LogError(ex, "Database seeding failed.");
+    }
+}
+
+// Setup Hangfire recurring jobs (skip in Testing env)
+if (!app.Environment.IsEnvironment("Testing"))
+    HangfireJobsSetup.SetupRecurringJobs(app.Services);
 
 app.Run();
 

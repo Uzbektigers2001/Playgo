@@ -3,8 +3,11 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Public read-only catalog of subscription plans. Cached in Redis for 1 hour.</summary>
 [ApiController]
 [Route("api/plans")]
+[Tags("Plans")]
+[Produces("application/json")]
 public class PlansController : ControllerBase
 {
     private readonly IPlanService _planService;

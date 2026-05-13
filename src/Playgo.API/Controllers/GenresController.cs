@@ -5,8 +5,11 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Genre catalog and admin CRUD/translations.</summary>
 [ApiController]
 [Route("api/genres")]
+[Tags("Genres")]
+[Produces("application/json")]
 public class GenresController : ControllerBase
 {
     private readonly IGenreService _genreService;

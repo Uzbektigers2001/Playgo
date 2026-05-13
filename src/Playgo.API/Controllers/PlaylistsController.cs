@@ -7,8 +7,11 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>User-owned playlists; public playlists visible to everyone.</summary>
 [ApiController]
 [Route("api/playlists")]
+[Tags("Playlists")]
+[Produces("application/json")]
 public class PlaylistsController : ControllerBase
 {
     private readonly IPlaylistService _playlistService;

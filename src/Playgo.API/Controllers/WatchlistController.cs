@@ -6,9 +6,12 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>"Save for later" — separate from Favorites, supports priority + notes.</summary>
 [ApiController]
 [Authorize]
 [Route("api/watchlist")]
+[Tags("Watchlist")]
+[Produces("application/json")]
 public class WatchlistController : ControllerBase
 {
     private readonly IWatchlistService _watchlistService;

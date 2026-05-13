@@ -6,9 +6,12 @@ using Playgo.Application.Services;
 
 namespace Playgo.API.Controllers;
 
+/// <summary>Admin content CRUD: create / update / delete contents, seasons, episodes, translations.</summary>
 [ApiController]
 [Route("api/admin/contents")]
 [Authorize(Roles = "Admin")]
+[Tags("Admin - Contents")]
+[Produces("application/json")]
 public class AdminContentsController : ControllerBase
 {
     private readonly IContentService _contentService;
