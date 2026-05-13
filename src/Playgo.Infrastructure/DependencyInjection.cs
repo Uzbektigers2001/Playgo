@@ -10,6 +10,7 @@ using Playgo.Infrastructure.Persistence;
 using Playgo.Infrastructure.Persistence.Seeders;
 using Playgo.Application.Services;
 using Playgo.Infrastructure.Services;
+using Playgo.Infrastructure.Services.Email;
 using Playgo.Infrastructure.Services.Payments;
 using StackExchange.Redis;
 
@@ -64,6 +65,12 @@ public static class DependencyInjection
         services.AddKeyedScoped<IPaymentProviderService, PaymePaymentProvider>("Payme");
         services.AddKeyedScoped<IPaymentProviderService, StripePaymentProvider>("Stripe");
         services.AddKeyedScoped<IPaymentProviderService, ManualPaymentProvider>("Manual");
+
+        services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+        if (environment is not null && environment.IsDevelopment())
+            services.AddScoped<IEmailService, LoggerEmailService>();
+        else
+            services.AddScoped<IEmailService, SmtpEmailService>();
 
         services.AddScoped<HangfireJobs>();
         services.AddScoped<DbSeeder>();

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Playgo.Application.Common.Interfaces;
 
 namespace Playgo.API.Controllers;
@@ -26,6 +27,7 @@ public class UploadController : ControllerBase
 
     [HttpPost("image")]
     [RequestSizeLimit(MaxImageBytes)]
+    [EnableRateLimiting("Upload")]
     public async Task<IActionResult> UploadImage(IFormFile? file, CancellationToken ct)
     {
         var error = ValidateFile(file, MaxImageBytes, AllowedImageTypes);
@@ -38,6 +40,7 @@ public class UploadController : ControllerBase
 
     [HttpPost("video")]
     [RequestSizeLimit(MaxVideoBytes)]
+    [EnableRateLimiting("Upload")]
     public async Task<IActionResult> UploadVideo(IFormFile? file, CancellationToken ct)
     {
         var error = ValidateFile(file, MaxVideoBytes, AllowedVideoTypes);

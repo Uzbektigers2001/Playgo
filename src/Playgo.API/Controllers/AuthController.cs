@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Playgo.API.Extensions;
 using Playgo.Application.Common;
 using Playgo.Application.Common.Interfaces;
@@ -33,6 +34,7 @@ public class AuthController : ControllerBase
     /// <response code="201">Successful registration. Returns access + refresh tokens and user profile.</response>
     /// <response code="400">Validation failed yoki email/username band.</response>
     [HttpPost("register")]
+    [EnableRateLimiting("Register")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken ct)
@@ -47,6 +49,7 @@ public class AuthController : ControllerBase
     /// <response code="200">Login muvaffaqiyatli; access + refresh tokens qaytariladi.</response>
     /// <response code="400">Invalid credentials.</response>
     [HttpPost("login")]
+    [EnableRateLimiting("Login")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request, CancellationToken ct)
@@ -56,8 +59,6 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>Yangi access + refresh token chiqaradi (rotation).</summary>
-    /// <param name="request">Joriy access va refresh tokenlar.</param>
-    /// <param name="ct">Cancellation token.</param>
     /// <response code="200">Tokenlar yangilandi.</response>
     /// <response code="400">Refresh token noto'g'ri yoki muddati o'tgan.</response>
     [HttpPost("refresh")]
@@ -69,16 +70,69 @@ public class AuthController : ControllerBase
         return HandleResult(result);
     }
 
-    /// <summary>Foydalanuvchining refresh tokenini bekor qiladi.</summary>
+    /// <summary>Faqat shu sessiyaning refresh tokenini bekor qiladi.</summary>
     /// <response code="204">Logout muvaffaqiyatli.</response>
     /// <response code="401">Authorize talab qilinadi.</response>
     [Authorize]
     [HttpPost("logout")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Logout(CancellationToken ct)
+    public async Task<IActionResult> Logout([FromBody] LogoutRequest? request, CancellationToken ct)
     {
-        var result = await _authService.LogoutAsync(User.GetUserId(), ct);
+        var result = await _authService.LogoutAsync(User.GetUserId(), request?.RefreshToken, ct);
+        return HandleNoContent(result);
+    }
+
+    /// <summary>Userning hamma faol refresh tokenlarini revoke qiladi.</summary>
+    [Authorize]
+    [HttpPost("logout-all")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> LogoutAll(CancellationToken ct)
+    {
+        var result = await _authService.LogoutAllAsync(User.GetUserId(), ct);
+        return HandleNoContent(result);
+    }
+
+    /// <summary>Email tasdiqlash tokenini tekshiradi.</summary>
+    [HttpPost("verify-email")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request, CancellationToken ct)
+    {
+        var result = await _authService.VerifyEmailAsync(request.Token, ct);
+        return HandleNoContent(result);
+    }
+
+    /// <summary>Verification emailni qayta yuboradi.</summary>
+    [Authorize]
+    [HttpPost("resend-verification")]
+    [EnableRateLimiting("Default")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ResendVerification(CancellationToken ct)
+    {
+        var result = await _authService.ResendVerificationAsync(User.GetUserId(), ct);
+        return HandleNoContent(result);
+    }
+
+    /// <summary>Parol tiklash linkini yuboradi (har doim 200 — email enumeration himoyasi).</summary>
+    [HttpPost("forgot-password")]
+    [EnableRateLimiting("Login")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken ct)
+    {
+        await _authService.ForgotPasswordAsync(request.Email, ct);
+        return Ok(new { message = "If an account exists for that email, a reset link has been sent." });
+    }
+
+    /// <summary>Parolni reset tokeni bilan o'zgartiradi.</summary>
+    [HttpPost("reset-password")]
+    [EnableRateLimiting("Login")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken ct)
+    {
+        var result = await _authService.ResetPasswordAsync(request, ct);
         return HandleNoContent(result);
     }
 
@@ -101,8 +155,7 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     public Task<IActionResult> Profile(CancellationToken ct) => Me(ct);
 
-    /// <summary>Joriy foydalanuvchining profilini yangilaydi (fullName / firstName / lastName / avatarUrl).</summary>
-    /// <response code="200">Yangilangan UserDto.</response>
+    /// <summary>Joriy foydalanuvchining profilini yangilaydi.</summary>
     [Authorize]
     [HttpPut("me")]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
@@ -113,9 +166,7 @@ public class AuthController : ControllerBase
         return HandleResult(result);
     }
 
-    /// <summary>Parolni o'zgartiradi.</summary>
-    /// <response code="204">Parol muvaffaqiyatli yangilandi.</response>
-    /// <response code="400">Joriy parol noto'g'ri.</response>
+    /// <summary>Parolni o'zgartiradi (joriy parol kerak).</summary>
     [Authorize]
     [HttpPut("me/password")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -136,7 +187,7 @@ public class AuthController : ControllerBase
         return HandleResult(result);
     }
 
-    /// <summary>Sozlamalarni PATCH-semantikasi bilan yangilaydi (faqat berilgan field-lar yangilanadi).</summary>
+    /// <summary>Sozlamalarni PATCH-semantikasi bilan yangilaydi.</summary>
     [Authorize]
     [HttpPut("me/preferences")]
     [ProducesResponseType(typeof(UserPreferencesDto), StatusCodes.Status200OK)]
@@ -164,4 +215,6 @@ public class AuthController : ControllerBase
         if (!result.Success) return BadRequest(new { error = result.Error });
         return NoContent();
     }
+
+    public record LogoutRequest(string? RefreshToken);
 }

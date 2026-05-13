@@ -1,9 +1,12 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -82,13 +85,63 @@ builder.Services.AddResponseCompression(o =>
     o.Providers.Add<GzipCompressionProvider>();
 });
 
-// Health checks (skip Postgres/Redis probes in Testing — run liveness only)
+// Rate limiting (.NET 8 native)
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("Login", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "anon",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(15),
+            QueueLimit = 0,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+        }));
+
+    options.AddPolicy("Register", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "anon",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 3,
+            Window = TimeSpan.FromHours(1),
+            QueueLimit = 0,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+        }));
+
+    options.AddPolicy("Upload", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.User.Identity?.Name
+            ?? context.Connection.RemoteIpAddress?.ToString()
+            ?? "anon",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(5),
+            QueueLimit = 0,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+        }));
+
+    options.AddPolicy("Default", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.User.Identity?.Name
+            ?? context.Connection.RemoteIpAddress?.ToString()
+            ?? "anon",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 100,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+        }));
+});
+
+// Health checks (skip Postgres/Redis probes in Testing env so integration tests don't need them)
 var healthChecks = builder.Services.AddHealthChecks();
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     healthChecks
-        .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection")!)
-        .AddRedis(builder.Configuration.GetConnectionString("Redis")!);
+        .AddNpgSql(builder.Configuration.GetConnectionString("DefaultConnection")!, tags: new[] { "ready" })
+        .AddRedis(builder.Configuration.GetConnectionString("Redis")!, tags: new[] { "ready" });
 }
 
 var app = builder.Build();
@@ -109,6 +162,7 @@ app.UseHttpsRedirection();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
@@ -118,8 +172,17 @@ if (!app.Environment.IsEnvironment("Testing"))
     });
 }
 
-app.MapControllers();
+app.MapControllers().RequireRateLimiting("Default");
+
 app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false,
+});
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+});
 
 // Auto-migrate in Development
 if (app.Environment.IsDevelopment())

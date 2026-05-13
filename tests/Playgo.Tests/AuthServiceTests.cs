@@ -161,7 +161,7 @@ public class AuthServiceTests
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
-        var result = await svc.LogoutAsync(user.Id);
+        var result = await svc.LogoutAsync(user.Id, refreshToken: null);
 
         result.Success.Should().BeTrue();
         var fresh = await db.Users.SingleAsync();

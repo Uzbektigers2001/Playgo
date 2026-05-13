@@ -26,4 +26,10 @@
     <ProjectReference Include="..\Playgo.Application\Playgo.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Templates\Emails\*.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

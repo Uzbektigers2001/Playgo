@@ -123,7 +123,7 @@ public class AuthEndpointsTests : IClassFixture<TestWebAppFactory>
         var auth = await reg.Content.ReadFromJsonAsync<AuthResponse>(JsonOpts);
 
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
-        var logout = await client.PostAsync("/api/auth/logout", content: null);
+        var logout = await client.PostAsJsonAsync("/api/auth/logout", new { refreshToken = auth.RefreshToken });
         logout.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         var refreshAttempt = await client.PostAsJsonAsync("/api/auth/refresh", new

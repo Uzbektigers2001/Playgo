@@ -66,10 +66,15 @@ dotnet run
 ### Auth — /api/auth
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | /register | — | Ro'yxatdan o'tish |
-| POST | /login | — | Kirish |
-| POST | /refresh | — | Token yangilash |
-| POST | /logout | ✓ | Chiqish |
+| POST | /register | — | Ro'yxatdan o'tish (rate-limit: Register) |
+| POST | /login | — | Kirish (rate-limit: Login) |
+| POST | /refresh | — | Refresh token rotatsiyasi |
+| POST | /logout | ✓ | Faqat shu sessiyadagi refresh tokenni revoke qilish |
+| POST | /logout-all | ✓ | Userning hamma refresh tokenlarini revoke qilish |
+| POST | /verify-email | — | `{ token }` — emailni tasdiqlash |
+| POST | /resend-verification | ✓ | Verification emailni qayta yuborish (rate-limit: Default) |
+| POST | /forgot-password | — | `{ email }` — har doim 200 (enumeration himoyasi, rate-limit: Login) |
+| POST | /reset-password | — | `{ token, newPassword }` — parolni tiklash (rate-limit: Login) |
 | GET | /me | ✓ | Profil |
 | PUT | /me | ✓ | Profilni yangilash |
 | PUT | /me/password | ✓ | Parol o'zgartirish |
@@ -355,6 +360,59 @@ The Next.js frontend lives in a separate repo and consumes this API. Key contrac
 
 ---
 
+## Production features
+
+### Caching strategy (Redis)
+| Key | TTL | Invalidated on |
+|-----|-----|----------------|
+| `content:featured:limit:{N}:{lang}` | 5 min | Content create/update/delete |
+| `content:trending:limit:{N}:{lang}` | 1 min | Content create/update/delete, hangfire `recalculate-trending` |
+| `content:id:{id}:{lang}:{user}` | 10 min | Content create/update/delete |
+| `content:slug:{slug}:{lang}:{user}` | 10 min | Content create/update/delete |
+| `genres:all` | 30 min | Genre/translation create/update/delete |
+| `user:prefs:{userId}` | 15 min | `PUT /api/auth/me/preferences` |
+
+`ICacheService.RemoveByPrefixAsync` is used so a single mutation flushes every paged/lang variant of the prefix.
+
+### Rate limiting (.NET 8 native)
+Configured via `AddRateLimiter` in `Program.cs`. Rejected requests return **HTTP 429**.
+
+| Policy | Limit | Window | Partitioned by | Applied to |
+|--------|-------|--------|----------------|------------|
+| `Login` | 5 | 15 min | client IP | `POST /api/auth/login`, `forgot-password`, `reset-password` |
+| `Register` | 3 | 1 hour | client IP | `POST /api/auth/register` |
+| `Upload` | 10 | 5 min | username (fallback IP) | `POST /api/upload/image`, `/api/upload/video` |
+| `Default` | 100 | 1 min | username (fallback IP) | every other endpoint via `MapControllers().RequireRateLimiting("Default")` |
+
+### Email verification
+- On register a 32-char hex token is generated with 24h expiry; an HTML email is dispatched (`verify-email.html`) — only the clickable link is in the body, never the bare token.
+- `POST /api/auth/verify-email` `{ token }` — flips `IsEmailVerified=true`, clears the token.
+- `POST /api/auth/resend-verification` `[Authorize]` — regenerates the token and resends the email.
+
+### Password reset
+- `POST /api/auth/forgot-password` `{ email }` — **always returns 200** to prevent email enumeration. Sends a `password-reset.html` email containing only a link if the user exists; the unknown-email case is logged but never leaked.
+- `POST /api/auth/reset-password` `{ token, newPassword }` — verifies the 1-hour `RandomNumberGenerator`-issued token, hashes the new password, clears the reset token, and **revokes every active refresh token** for the user.
+
+### Refresh token rotation & replay detection
+- `RefreshTokenEntity` (table `refresh_tokens`) tracks `Token`, `ExpiresAt`, `RevokedAt`, `RevokedByIp`, `ReplacedByToken`, `CreatedByIp`, `UserAgent` per session.
+- `POST /api/auth/refresh` issues a new token, marks the old one revoked, and links it via `ReplacedByToken`.
+- **Replay detection**: presenting an already-revoked token revokes every active session for that user and logs a security warning.
+- `POST /api/auth/logout` `{ refreshToken? }` revokes only the supplied session.
+- `POST /api/auth/logout-all` `[Authorize]` revokes every active session for the caller.
+
+### Email transport
+- **Development**: `LoggerEmailService` writes the rendered template to logs — no SMTP needed.
+- **Production**: `SmtpEmailService` (MailKit) reads `EmailSettings:{Host,Port,EnableSsl,Username,Password,FromEmail,FromName}` from configuration; templates live in `src/Playgo.API/Templates/Emails/*.html` and are copied to output.
+
+### Health probes
+| Endpoint | Purpose |
+|----------|---------|
+| `/health/live` | Liveness — always healthy if the process is up. |
+| `/health/ready` | Readiness — runs Postgres + Redis checks tagged `ready`. |
+| `/health` | Aggregate. |
+
+---
+
 ## Roadmap (keyingi bosqich)
 
 - [ ] HLS transcoding — FFmpeg worker service
@@ -362,4 +420,4 @@ The Next.js frontend lives in a separate repo and consumes this API. Key contrac
 - [ ] Full-text search — PostgreSQL tsvector
 - [ ] Keyset pagination — OFFSET o'rniga cursor-based
 - [ ] Real money provider integration (Click/Payme/Stripe signature verification)
-- [ ] Email verification + password reset (in-progress on `feature/09-cache-ratelimit-email`)
+- [ ] Admin analytics expansion (per-user retention, revenue cohorts)

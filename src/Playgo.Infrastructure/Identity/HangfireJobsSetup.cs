@@ -1,6 +1,7 @@
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Playgo.Application.Common.Interfaces;
 using Playgo.Domain.Enums;
 using Playgo.Infrastructure.Persistence;
 
@@ -35,10 +36,12 @@ public static class HangfireJobsSetup
 public class HangfireJobs
 {
     private readonly ApplicationDbContext _db;
+    private readonly ICacheService? _cache;
 
-    public HangfireJobs(ApplicationDbContext db)
+    public HangfireJobs(ApplicationDbContext db, ICacheService? cache = null)
     {
         _db = db;
+        _cache = cache;
     }
 
     public async Task CleanupOldHistoryAsync()
@@ -103,5 +106,8 @@ public class HangfireJobs
         }
 
         await _db.SaveChangesAsync();
+
+        if (_cache is not null)
+            await _cache.RemoveByPrefixAsync("content:trending:");
     }
 }
